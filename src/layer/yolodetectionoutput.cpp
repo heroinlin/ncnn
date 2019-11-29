@@ -25,19 +25,6 @@ YoloDetectionOutput::YoloDetectionOutput()
 {
     one_blob_only = false;
     support_inplace = true;
-
-    softmax = ncnn::create_layer(ncnn::LayerType::Softmax);
-
-    // set param
-    ncnn::ParamDict pd;
-    pd.set(0, 0);// axis
-
-    softmax->load_param(pd);
-}
-
-YoloDetectionOutput::~YoloDetectionOutput()
-{
-    delete softmax;
 }
 
 int YoloDetectionOutput::load_param(const ParamDict& pd)
@@ -47,6 +34,34 @@ int YoloDetectionOutput::load_param(const ParamDict& pd)
     confidence_threshold = pd.get(2, 0.01f);
     nms_threshold = pd.get(3, 0.45f);
     biases = pd.get(4, Mat());
+
+    return 0;
+}
+
+int YoloDetectionOutput::create_pipeline(const Option& opt)
+{
+    {
+        softmax = ncnn::create_layer(ncnn::LayerType::Softmax);
+
+        ncnn::ParamDict pd;
+        pd.set(0, 0);// axis
+
+        softmax->load_param(pd);
+
+        softmax->create_pipeline(opt);
+    }
+
+    return 0;
+}
+
+int YoloDetectionOutput::destroy_pipeline(const Option& opt)
+{
+    if (softmax)
+    {
+        softmax->destroy_pipeline(opt);
+        delete softmax;
+        softmax = 0;
+    }
 
     return 0;
 }

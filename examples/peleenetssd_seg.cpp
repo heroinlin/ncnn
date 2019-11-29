@@ -36,11 +36,12 @@ static int detect_peleenet(const cv::Mat& bgr, std::vector<Object>& objects,ncnn
     ncnn::Net peleenet;
 
 #if NCNN_VULKAN
-    peleenet.use_vulkan_compute = true;
+    peleenet.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
     // model is converted from https://github.com/eric612/MobileNet-YOLO
     // and can be downloaded from https://drive.google.com/open?id=1Wt6jKv13sBRMHgrGAJYlOlRF-o80pC0g
+    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     peleenet.load_param("pelee.param");
     peleenet.load_model("pelee.bin");
 
@@ -94,7 +95,8 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects,
         "traffic light","traffic sign","train"};
 
     cv::Mat image = bgr.clone();
-    std::vector<int> color = {128,255,128,244,35,232};
+    const int color[] = {128,255,128,244,35,232};
+    const int color_count = sizeof(color) / sizeof(int);
     
     for (size_t i = 0; i < objects.size(); i++)
     {
@@ -147,7 +149,7 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects,
             }
             if(index > -1) {
                 int color_index = (index)*3;
-                if(color_index<color.size()) {
+                if(color_index<color_count) {
                     int b = color[color_index];
                     int g = color[color_index+1];
                     int r = color[color_index+2];

@@ -36,11 +36,12 @@ static int detect_mobilenet(const cv::Mat& bgr, std::vector<Object>& objects)
     ncnn::Net mobilenet;
 
 #if NCNN_VULKAN
-    mobilenet.use_vulkan_compute = true;
+    mobilenet.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
     // model is converted from https://github.com/chuanqi305/MobileNet-SSD
     // and can be downloaded from https://drive.google.com/open?id=0ByaKLD9QaPtucWk0Y0dha1VVY0U
+    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     mobilenet.load_param("mobilenet_ssd_voc_ncnn.param");
     mobilenet.load_model("mobilenet_ssd_voc_ncnn.bin");
 

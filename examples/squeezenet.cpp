@@ -29,9 +29,10 @@ static int detect_squeezenet(const cv::Mat& bgr, std::vector<float>& cls_scores)
     ncnn::Net squeezenet;
 
 #if NCNN_VULKAN
-    squeezenet.use_vulkan_compute = true;
+    squeezenet.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
+    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     squeezenet.load_param("squeezenet_v1.1.param");
     squeezenet.load_model("squeezenet_v1.1.bin");
 

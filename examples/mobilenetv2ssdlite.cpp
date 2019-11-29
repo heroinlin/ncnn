@@ -39,13 +39,14 @@ static int detect_mobilenetv2(const cv::Mat& bgr, std::vector<Object>& objects)
     ncnn::Net mobilenetv2;
 
 #if NCNN_VULKAN
-    mobilenetv2.use_vulkan_compute = true;
+    mobilenetv2.opt.use_vulkan_compute = true;
 #endif // NCNN_VULKAN
 
     mobilenetv2.register_custom_layer("Silence", Noop_layer_creator);
 
     // original pretrained model from https://github.com/chuanqi305/MobileNetv2-SSDLite
     // https://github.com/chuanqi305/MobileNetv2-SSDLite/blob/master/ssdlite/voc/deploy.prototxt
+    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     mobilenetv2.load_param("mobilenetv2_ssdlite_voc.param");
     mobilenetv2.load_model("mobilenetv2_ssdlite_voc.bin");
 
