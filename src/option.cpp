@@ -43,9 +43,9 @@ Option::Option()
 
     use_packing_layout = false;
 
-    // sanitize
-    if (num_threads <= 0)
-        num_threads = 1;
+    use_shader_pack8 = false;
+
+    use_bf16_storage = false;
 }
 
 } // namespace ncnn

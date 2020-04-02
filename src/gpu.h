@@ -76,6 +76,9 @@ public:
     // vulkan physical device
     VkPhysicalDevice physical_device;
 
+    // memory properties
+    VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+
     // info
     uint32_t api_version;
     uint32_t driver_version;
@@ -89,25 +92,30 @@ public:
     // 3 = cpu
     int type;
 
-    // hardware capability
+    // hardware limit
     uint32_t max_shared_memory_size;
     uint32_t max_workgroup_count[3];
     uint32_t max_workgroup_invocations;
     uint32_t max_workgroup_size[3];
     size_t memory_map_alignment;
     size_t buffer_offset_alignment;
+    size_t non_coherent_atom_size;
     float timestamp_period;
 
     // runtime
     uint32_t compute_queue_family_index;
+    uint32_t graphics_queue_family_index;
     uint32_t transfer_queue_family_index;
 
     uint32_t compute_queue_count;
+    uint32_t graphics_queue_count;
     uint32_t transfer_queue_count;
 
-    uint32_t unified_memory_index;
-    uint32_t device_local_memory_index;
-    uint32_t host_visible_memory_index;
+    // bug is not feature
+    bool bug_local_size_spec_const;
+
+    // but sometimes bug is a feature
+    bool bug_implicit_fp16_arithmetic;
 
     // fp16 and int8 feature
     bool support_fp16_packed;
@@ -115,6 +123,9 @@ public:
     bool support_fp16_arithmetic;
     bool support_int8_storage;
     bool support_int8_arithmetic;
+
+    // ycbcr conversion feature
+    bool support_ycbcr_conversion;
 
     // extension capability
     int support_VK_KHR_8bit_storage;
@@ -150,9 +161,19 @@ public:
 
     VkDevice vkdevice() const { return device; }
 
-    VkShaderModule get_shader_module(const char* name) const;
+    VkShaderModule get_shader_module(int shader_type_index) const;
+
+    // with fixed workgroup size
+    VkShaderModule create_shader_module(int shader_type_index, uint32_t local_size_x, uint32_t local_size_y, uint32_t local_size_z) const;
 
     VkShaderModule compile_shader_module(const uint32_t* spv_data, size_t spv_data_size) const;
+
+    // with fixed workgroup size
+    VkShaderModule compile_shader_module(const uint32_t* spv_data, size_t spv_data_size, uint32_t local_size_x, uint32_t local_size_y, uint32_t local_size_z) const;
+
+    uint32_t find_memory_index(uint32_t memory_type_bits, VkFlags required, VkFlags preferred, VkFlags preferred_not) const;
+    bool is_mappable(uint32_t memory_type_index) const;
+    bool is_coherent(uint32_t memory_type_index) const;
 
     VkQueue acquire_queue(uint32_t queue_family_index) const;
     void reclaim_queue(uint32_t queue_family_index, VkQueue queue) const;
@@ -216,6 +237,7 @@ private:
 
     // hardware queue
     mutable std::vector<VkQueue> compute_queues;
+    mutable std::vector<VkQueue> graphics_queues;
     mutable std::vector<VkQueue> transfer_queues;
     mutable Mutex queue_lock;
 
@@ -229,6 +251,18 @@ private:
 };
 
 VulkanDevice* get_gpu_device(int device_index = get_default_gpu_index());
+
+// info from spirv
+class ShaderInfo
+{
+public:
+    int specialization_count;
+    int binding_count;
+    int push_constant_count;
+};
+
+const ShaderInfo& get_shader_info(int shader_type_index);
+ShaderInfo resolve_shader_info(const uint32_t* spv_data, size_t spv_data_size);
 
 } // namespace ncnn
 

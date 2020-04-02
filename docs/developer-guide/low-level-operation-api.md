@@ -2,6 +2,9 @@ implement elementwise addition with/without broadcast using BinaryOp operation
 ```
 void binary_add(const ncnn::Mat& a, const ncnn::Mat& b, ncnn::Mat& c)
 {
+    ncnn::Option opt;
+    opt.num_threads = 2;
+
     ncnn::Layer* op = ncnn::create_layer("BinaryOp");
 
     // set param
@@ -10,15 +13,19 @@ void binary_add(const ncnn::Mat& a, const ncnn::Mat& b, ncnn::Mat& c)
 
     op->load_param(pd);
 
+    op->create_pipeline(opt);
+
     // forward
     std::vector<ncnn::Mat> bottoms(2);
     bottoms[0] = a;
     bottoms[1] = b;
 
     std::vector<ncnn::Mat> tops(1);
-    op->forward(bottoms, tops);
+    op->forward(bottoms, tops, opt);
 
     c = tops[0];
+
+    op->destroy_pipeline(opt);
 
     delete op;
 }
@@ -28,6 +35,9 @@ implement 3x3 box blur on three channel image using ConvolutionDepthWise operati
 ```
 void convolution_3x3_boxblur_RGB(const ncnn::Mat& rgb, ncnn::Mat& out)
 {
+    ncnn::Option opt;
+    opt.num_threads = 2;
+
     ncnn::Layer* op = ncnn::create_layer("ConvolutionDepthWise");
 
     // set param
@@ -51,8 +61,12 @@ void convolution_3x3_boxblur_RGB(const ncnn::Mat& rgb, ncnn::Mat& out)
 
     op->load_model(ncnn::ModelBinFromMatArray(weights));
 
+    op->create_pipeline(opt);
+
     // forward
-    op->forward(rgb, out);
+    op->forward(rgb, out, opt);
+
+    op->destroy_pipeline(opt);
 
     delete op;
 }
@@ -61,6 +75,9 @@ transpose Mat, chw to cwh
 ```
 void transpose(const ncnn::Mat& in, ncnn::Mat& out)
 {
+    ncnn::Option opt;
+    opt.num_threads = 2;
+
     ncnn::Layer* op = ncnn::create_layer("Permute");
 
     // set param
@@ -69,8 +86,12 @@ void transpose(const ncnn::Mat& in, ncnn::Mat& out)
 
     op->load_param(pd);
 
+    op->create_pipeline(opt);
+
     // forward
-    op->forward(in, out);
+    op->forward(in, out, opt);
+
+    op->destroy_pipeline(opt);
 
     delete op;
 }
@@ -80,6 +101,9 @@ apply instance normalization
 ```
 void normalize(const ncnn::Mat& in, ncnn::Mat& out)
 {
+    ncnn::Option opt;
+    opt.num_threads = 2;
+
     ncnn::Layer* op = ncnn::create_layer("InstanceNorm");
 
     // set param
@@ -99,8 +123,12 @@ void normalize(const ncnn::Mat& in, ncnn::Mat& out)
 
     op->load_model(ncnn::ModelBinFromMatArray(weights));
 
+    op->create_pipeline(opt);
+
     // forward
-    op->forward(in, out);
+    op->forward(in, out, opt);
+
+    op->destroy_pipeline(opt);
 
     delete op;
 }
@@ -111,16 +139,16 @@ void normalize(const ncnn::Mat& in, ncnn::Mat& out)
 ncnn::create_gpu_instance();
 
 {
-ncnn::VulkanDevice vkdev;
+ncnn::VulkanDevice* vkdev = ncnn::get_gpu_device();
 
-ncnn::VkWeightBufferAllocator g_weight_vkallocator(&vkdev);
-ncnn::VkBlobBufferAllocator g_blob_vkallocator(&vkdev);
-ncnn::VkStagingBufferAllocator g_staging_vkallocator(&vkdev);
-ncnn::VkWeightStagingBufferAllocator g_weight_staging_vkallocator(&vkdev);
+ncnn::VkWeightBufferAllocator g_weight_vkallocator(vkdev);
+ncnn::VkBlobBufferAllocator g_blob_vkallocator(vkdev);
+ncnn::VkStagingBufferAllocator g_staging_vkallocator(vkdev);
+ncnn::VkWeightStagingBufferAllocator g_weight_staging_vkallocator(vkdev);
 
 // create layer
 ncnn::Layer* convolution = ncnn::create_layer("Convolution");
-convolution->vkdev = &vkdev;
+convolution->vkdev = vkdev;
 
 // load param
 {
@@ -145,7 +173,7 @@ convolution->load_model(mb);
 
 // upload model
 {
-ncnn::VkTransfer cmd(&vkdev);
+ncnn::VkTransfer cmd(vkdev);
 cmd.weight_vkallocator = &g_weight_vkallocator;
 cmd.staging_vkallocator = &g_weight_staging_vkallocator;
 
@@ -158,7 +186,7 @@ g_weight_staging_vkallocator.clear();
 }
 
 // create pipeline
-convolution->create_pipeline();
+convolution->create_pipeline(opt);
 
 // set default option
 {
@@ -192,18 +220,17 @@ ncnn::VkMat top_gpu;
 
 // forward
 {
-ncnn::VkCompute cmd(&vkdev);
+ncnn::VkCompute cmd(vkdev);
 
 cmd.record_upload(bottom_gpu);
 
-convolution->forward(bottom_gpu, top_gpu, cmd);
+convolution->forward(bottom_gpu, top_gpu, cmd, opt);
 
 top_gpu.prepare_staging_buffer();
 
 cmd.record_download(top_gpu);
 
-cmd.submit();
-cmd.wait();
+cmd.submit_and_wait();
 }
 
 ncnn::Mat top;
@@ -213,6 +240,8 @@ ncnn::Mat top;
 top.create_like(top_gpu);
 top_gpu.download(top);
 }
+
+convolution->destroy_pipeline(opt);
 
 delete convolution;
 
