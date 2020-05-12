@@ -24,7 +24,6 @@
 #include "platform.h"
 #include "allocator.h"
 #include "option.h"
-#include "gpu.h"
 
 #if NCNN_VULKAN
 #include <vulkan/vulkan.h>
@@ -41,6 +40,7 @@ namespace ncnn {
 
 #if NCNN_VULKAN
 class VkMat;
+class VkImageMat;
 #endif // NCNN_VULKAN
 
 // the three dimension matrix
@@ -111,6 +111,8 @@ public:
 #if NCNN_VULKAN
     // allocate like
     void create_like(const VkMat& m, Allocator* allocator = 0);
+    // allocate like
+    void create_like(const VkImageMat& im, Allocator* allocator = 0);
 #endif // NCNN_VULKAN
     // refcount++
     void addref();
@@ -261,59 +263,53 @@ public:
     // empty
     VkMat();
     // vec
-    VkMat(int w, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, size_t elemsize, VkAllocator* allocator);
     // image
-    VkMat(int w, int h, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, size_t elemsize, VkAllocator* allocator);
     // dim
-    VkMat(int w, int h, int c, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, int c, size_t elemsize, VkAllocator* allocator);
     // packed vec
-    VkMat(int w, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, size_t elemsize, int elempack, VkAllocator* allocator);
     // packed image
-    VkMat(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator);
     // packed dim
-    VkMat(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator);
     // copy
     VkMat(const VkMat& m);
     // external vec
-    VkMat(int w, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator);
     // external image
-    VkMat(int w, int h, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator);
     // external dim
-    VkMat(int w, int h, int c, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, int c, VkBufferMemory* data, size_t elemsize, VkAllocator* allocator);
     // external packed vec
-    VkMat(int w, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
     // external packed image
-    VkMat(int w, int h, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
     // external packed dim
-    VkMat(int w, int h, int c, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    VkMat(int w, int h, int c, VkBufferMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
     // release
     ~VkMat();
     // assign
     VkMat& operator=(const VkMat& m);
     // allocate vec
-    void create(int w, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, size_t elemsize, VkAllocator* allocator);
     // allocate image
-    void create(int w, int h, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, int h, size_t elemsize, VkAllocator* allocator);
     // allocate dim
-    void create(int w, int h, int c, size_t elemsize, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, int h, int c, size_t elemsize, VkAllocator* allocator);
     // allocate packed vec
-    void create(int w, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, size_t elemsize, int elempack, VkAllocator* allocator);
     // allocate packed image
-    void create(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator);
     // allocate packed dim
-    void create(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator);
     // allocate like
-    void create_like(const Mat& m, VkAllocator* allocator, VkAllocator* staging_allocator);
+    void create_like(const Mat& m, VkAllocator* allocator);
     // allocate like
-    void create_like(const VkMat& m, VkAllocator* allocator, VkAllocator* staging_allocator);
-
-    // staging buffer
-    void prepare_staging_buffer();
-    void discard_staging_buffer();
-
-    // copy
-    void upload(const Mat& m);
-    void download(Mat& m) const;
+    void create_like(const VkMat& m, VkAllocator* allocator);
+    // allocate like
+    void create_like(const VkImageMat& im, VkAllocator* allocator);
 
     // mapped
     Mat mapped() const;
@@ -333,19 +329,14 @@ public:
     // low-level reference
     VkBuffer buffer() const;
     size_t buffer_offset() const;
-    VkBuffer staging_buffer() const;
-    size_t staging_buffer_offset() const;
+    size_t buffer_capacity() const;
 
     // device buffer
     VkBufferMemory* data;
 
-    // staging buffer
-    VkBufferMemory* staging_data;
-
     // pointer to the reference counter
     // when points to user-allocated data, the pointer is NULL
     int* refcount;
-    int* staging_refcount;
 
     // element size in bytes
     // 4 = float32/int32
@@ -362,7 +353,6 @@ public:
 
     // the allocator
     VkAllocator* allocator;
-    VkAllocator* staging_allocator;
 
     // the dimension rank
     int dims;
@@ -379,18 +369,58 @@ class VkImageMat
 public:
     // empty
     VkImageMat();
+    // vec
+    VkImageMat(int w, size_t elemsize, VkAllocator* allocator);
     // image
-    VkImageMat(int width, int height, VkFormat format, VkImageAllocator* allocator);
+    VkImageMat(int w, int h, size_t elemsize, VkAllocator* allocator);
+    // dim
+    VkImageMat(int w, int h, int c, size_t elemsize, VkAllocator* allocator);
+    // packed vec
+    VkImageMat(int w, size_t elemsize, int elempack, VkAllocator* allocator);
+    // packed image
+    VkImageMat(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator);
+    // packed dim
+    VkImageMat(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator);
     // copy
     VkImageMat(const VkImageMat& m);
+    // external vec
+    VkImageMat(int w, VkImageMemory* data, size_t elemsize, VkAllocator* allocator);
     // external image
-    VkImageMat(int width, int height, VkImageMemory* data, VkFormat format, VkImageAllocator* allocator);
+    VkImageMat(int w, int h, VkImageMemory* data, size_t elemsize, VkAllocator* allocator);
+    // external dim
+    VkImageMat(int w, int h, int c, VkImageMemory* data, size_t elemsize, VkAllocator* allocator);
+    // external packed vec
+    VkImageMat(int w, VkImageMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
+    // external packed image
+    VkImageMat(int w, int h, VkImageMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
+    // external packed dim
+    VkImageMat(int w, int h, int c, VkImageMemory* data, size_t elemsize, int elempack, VkAllocator* allocator);
     // release
     ~VkImageMat();
     // assign
     VkImageMat& operator=(const VkImageMat& m);
+    // allocate vec
+    void create(int w, size_t elemsize, VkAllocator* allocator);
     // allocate image
-    void create(int width, int height, VkFormat format, VkImageAllocator* allocator);
+    void create(int w, int h, size_t elemsize, VkAllocator* allocator);
+    // allocate dim
+    void create(int w, int h, int c, size_t elemsize, VkAllocator* allocator);
+    // allocate packed vec
+    void create(int w, size_t elemsize, int elempack, VkAllocator* allocator);
+    // allocate packed image
+    void create(int w, int h, size_t elemsize, int elempack, VkAllocator* allocator);
+    // allocate packed dim
+    void create(int w, int h, int c, size_t elemsize, int elempack, VkAllocator* allocator);
+    // allocate like
+    void create_like(const Mat& m, VkAllocator* allocator);
+    // allocate like
+    void create_like(const VkMat& m, VkAllocator* allocator);
+    // allocate like
+    void create_like(const VkImageMat& im, VkAllocator* allocator);
+
+    // mapped
+    Mat mapped() const;
+    void* mapped_ptr() const;
 
     // refcount++
     void addref();
@@ -399,6 +429,9 @@ public:
 
     bool empty() const;
     size_t total() const;
+
+    // shape only
+    Mat shape() const;
 
     // low-level reference
     VkImage image() const;
@@ -416,12 +449,28 @@ public:
     // when points to user-allocated data, the pointer is NULL
     int* refcount;
 
-    // the allocator
-    VkImageAllocator* allocator;
+    // element size in bytes
+    // 4 = float32/int32
+    // 2 = float16
+    // 1 = int8/uint8
+    // 0 = empty
+    size_t elemsize;
 
-    int width;
-    int height;
-    VkFormat format;
+    // packed count inside element
+    // c/1-h-w-1  h/1-w-1  w/1-1  scalar
+    // c/4-h-w-4  h/4-w-4  w/4-4  sse/neon
+    // c/8-h-w-8  h/8-w-8  w/8-8  avx/fp16
+    int elempack;
+
+    // the allocator
+    VkAllocator* allocator;
+
+    // the dimension rank
+    int dims;
+
+    int w;
+    int h;
+    int c;
 };
 
 // type for vulkan specialization constant and push constant
@@ -1092,6 +1141,17 @@ inline void Mat::create_like(const VkMat& m, Allocator* _allocator)
     if (_dims == 3)
         create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator);
 }
+
+inline void Mat::create_like(const VkImageMat& im, Allocator* _allocator)
+{
+    int _dims = im.dims;
+    if (_dims == 1)
+        create(im.w, im.elemsize, im.elempack, _allocator);
+    if (_dims == 2)
+        create(im.w, im.h, im.elemsize, im.elempack, _allocator);
+    if (_dims == 3)
+        create(im.w, im.h, im.c, im.elemsize, im.elempack, _allocator);
+}
 #endif // NCNN_VULKAN
 
 inline void Mat::addref()
@@ -1234,90 +1294,87 @@ inline const float& Mat::operator[](size_t i) const
 #if NCNN_VULKAN
 
 inline VkMat::VkMat()
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
 }
 
-inline VkMat::VkMat(int _w, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _elemsize, _allocator, _staging_allocator);
+    create(_w, _elemsize, _allocator);
 }
 
-inline VkMat::VkMat(int _w, int _h, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, int _h, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _h, _elemsize, _allocator, _staging_allocator);
+    create(_w, _h, _elemsize, _allocator);
 }
 
-inline VkMat::VkMat(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _h, _c, _elemsize, _allocator, _staging_allocator);
+    create(_w, _h, _c, _elemsize, _allocator);
 }
 
-inline VkMat::VkMat(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _elemsize, _elempack, _allocator, _staging_allocator);
+    create(_w, _elemsize, _elempack, _allocator);
 }
 
-inline VkMat::VkMat(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _h, _elemsize, _elempack, _allocator, _staging_allocator);
+    create(_w, _h, _elemsize, _elempack, _allocator);
 }
 
-inline VkMat::VkMat(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(0), staging_data(0), refcount(0), staging_refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
+inline VkMat::VkMat(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0), cstep(0)
 {
-    create(_w, _h, _c, _elemsize, _elempack, _allocator, _staging_allocator);
+    create(_w, _h, _c, _elemsize, _elempack, _allocator);
 }
 
 inline VkMat::VkMat(const VkMat& m)
-    : data(m.data), staging_data(m.staging_data), refcount(m.refcount), staging_refcount(m.staging_refcount), elemsize(m.elemsize), elempack(m.elempack), allocator(m.allocator), staging_allocator(m.staging_allocator), dims(m.dims), w(m.w), h(m.h), c(m.c)
+    : data(m.data), refcount(m.refcount), elemsize(m.elemsize), elempack(m.elempack), allocator(m.allocator), dims(m.dims), w(m.w), h(m.h), c(m.c)
 {
     if (refcount)
         NCNN_XADD(refcount, 1);
 
-    if (staging_refcount)
-        NCNN_XADD(staging_refcount, 1);
-
     cstep = m.cstep;
 }
 
-inline VkMat::VkMat(int _w, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), staging_allocator(_staging_allocator), dims(1), w(_w), h(1), c(1)
+inline VkMat::VkMat(int _w, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(1), w(_w), h(1), c(1)
 {
     cstep = w;
 }
 
-inline VkMat::VkMat(int _w, int _h, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), staging_allocator(_staging_allocator), dims(2), w(_w), h(_h), c(1)
+inline VkMat::VkMat(int _w, int _h, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(2), w(_w), h(_h), c(1)
 {
     cstep = w * h;
 }
 
-inline VkMat::VkMat(int _w, int _h, int _c, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), staging_allocator(_staging_allocator), dims(3), w(_w), h(_h), c(_c)
+inline VkMat::VkMat(int _w, int _h, int _c, VkBufferMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(3), w(_w), h(_h), c(_c)
 {
     cstep = alignSize(w * h * elemsize, 16) / elemsize;
 }
 
-inline VkMat::VkMat(int _w, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), staging_allocator(_staging_allocator), dims(1), w(_w), h(1), c(1)
+inline VkMat::VkMat(int _w, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(1), w(_w), h(1), c(1)
 {
     cstep = w;
 }
 
-inline VkMat::VkMat(int _w, int _h, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), staging_allocator(_staging_allocator), dims(2), w(_w), h(_h), c(1)
+inline VkMat::VkMat(int _w, int _h, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(2), w(_w), h(_h), c(1)
 {
     cstep = w * h;
 }
 
-inline VkMat::VkMat(int _w, int _h, int _c, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
-    : data(_data), staging_data(0), refcount(0), staging_refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), staging_allocator(_staging_allocator), dims(3), w(_w), h(_h), c(_c)
+inline VkMat::VkMat(int _w, int _h, int _c, VkBufferMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(3), w(_w), h(_h), c(_c)
 {
     cstep = alignSize(w * h * elemsize, 16) / elemsize;
 }
@@ -1335,19 +1392,13 @@ inline VkMat& VkMat::operator=(const VkMat& m)
     if (m.refcount)
         NCNN_XADD(m.refcount, 1);
 
-    if (m.staging_refcount)
-        NCNN_XADD(m.staging_refcount, 1);
-
     release();
 
     data = m.data;
-    staging_data = m.staging_data;
     refcount = m.refcount;
-    staging_refcount = m.staging_refcount;
     elemsize = m.elemsize;
     elempack = m.elempack;
     allocator = m.allocator;
-    staging_allocator = m.staging_allocator;
 
     dims = m.dims;
     w = m.w;
@@ -1359,9 +1410,9 @@ inline VkMat& VkMat::operator=(const VkMat& m)
     return *this;
 }
 
-inline void VkMat::create(int _w, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, size_t _elemsize, VkAllocator* _allocator)
 {
-    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == 1 && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
         return;
 
     release();
@@ -1369,7 +1420,6 @@ inline void VkMat::create(int _w, size_t _elemsize, VkAllocator* _allocator, VkA
     elemsize = _elemsize;
     elempack = 1;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 1;
     w = _w;
@@ -1389,9 +1439,9 @@ inline void VkMat::create(int _w, size_t _elemsize, VkAllocator* _allocator, VkA
     }
 }
 
-inline void VkMat::create(int _w, int _h, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, int _h, size_t _elemsize, VkAllocator* _allocator)
 {
-    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == 1 && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
         return;
 
     release();
@@ -1399,7 +1449,6 @@ inline void VkMat::create(int _w, int _h, size_t _elemsize, VkAllocator* _alloca
     elemsize = _elemsize;
     elempack = 1;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 2;
     w = _w;
@@ -1419,9 +1468,9 @@ inline void VkMat::create(int _w, int _h, size_t _elemsize, VkAllocator* _alloca
     }
 }
 
-inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator)
 {
-    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == 1 && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
         return;
 
     release();
@@ -1429,7 +1478,6 @@ inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, VkAllocator*
     elemsize = _elemsize;
     elempack = 1;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 3;
     w = _w;
@@ -1449,9 +1497,9 @@ inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, VkAllocator*
     }
 }
 
-inline void VkMat::create(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator)
 {
-    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == _elempack && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
         return;
 
     release();
@@ -1459,7 +1507,6 @@ inline void VkMat::create(int _w, size_t _elemsize, int _elempack, VkAllocator* 
     elemsize = _elemsize;
     elempack = _elempack;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 1;
     w = _w;
@@ -1479,9 +1526,9 @@ inline void VkMat::create(int _w, size_t _elemsize, int _elempack, VkAllocator* 
     }
 }
 
-inline void VkMat::create(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator)
 {
-    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == _elempack && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
         return;
 
     release();
@@ -1489,7 +1536,6 @@ inline void VkMat::create(int _w, int _h, size_t _elemsize, int _elempack, VkAll
     elemsize = _elemsize;
     elempack = _elempack;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 2;
     w = _w;
@@ -1509,9 +1555,9 @@ inline void VkMat::create(int _w, int _h, size_t _elemsize, int _elempack, VkAll
     }
 }
 
-inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator)
 {
-    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == _elempack && allocator == _allocator && staging_allocator == _staging_allocator)
+    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
         return;
 
     release();
@@ -1519,7 +1565,6 @@ inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, int _elempac
     elemsize = _elemsize;
     elempack = _elempack;
     allocator = _allocator;
-    staging_allocator = _staging_allocator;
 
     dims = 3;
     w = _w;
@@ -1539,82 +1584,44 @@ inline void VkMat::create(int _w, int _h, int _c, size_t _elemsize, int _elempac
     }
 }
 
-inline void VkMat::create_like(const Mat& m, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create_like(const Mat& m, VkAllocator* _allocator)
 {
     int _dims = m.dims;
     if (_dims == 1)
-        create(m.w, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.elemsize, m.elempack, _allocator);
     if (_dims == 2)
-        create(m.w, m.h, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.h, m.elemsize, m.elempack, _allocator);
     if (_dims == 3)
-        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator);
 }
 
-inline void VkMat::create_like(const VkMat& m, VkAllocator* _allocator, VkAllocator* _staging_allocator)
+inline void VkMat::create_like(const VkMat& m, VkAllocator* _allocator)
 {
     int _dims = m.dims;
     if (_dims == 1)
-        create(m.w, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.elemsize, m.elempack, _allocator);
     if (_dims == 2)
-        create(m.w, m.h, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.h, m.elemsize, m.elempack, _allocator);
     if (_dims == 3)
-        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator, _staging_allocator);
+        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator);
 }
 
-inline void VkMat::prepare_staging_buffer()
+inline void VkMat::create_like(const VkImageMat& im, VkAllocator* _allocator)
 {
-    if (allocator->mappable)
-        return;
-
-    if (staging_allocator && staging_data)
-        return;
-
-    size_t totalsize = alignSize(total() * elemsize, 4);
-    staging_data = staging_allocator->fastMalloc(totalsize);
-
-    staging_refcount = (int*)((unsigned char*)staging_data + offsetof(VkBufferMemory, refcount));
-    *staging_refcount = 1;
-}
-
-inline void VkMat::discard_staging_buffer()
-{
-    if (allocator->mappable)
-        return;
-
-    if (staging_refcount && NCNN_XADD(staging_refcount, -1) == 1)
-    {
-        if (staging_allocator && staging_data)
-        {
-            staging_allocator->fastFree(staging_data);
-        }
-    }
-
-    staging_data = 0;
-    staging_refcount = 0;
-}
-
-inline void VkMat::upload(const Mat& m)
-{
-    memcpy(mapped_ptr(), m.data, m.total() * m.elemsize);
-
-    if (allocator->mappable)
-    {
-        allocator->flush(data);
-    }
-}
-
-inline void VkMat::download(Mat& m) const
-{
-    if (allocator->mappable)
-    {
-        allocator->invalidate(data);
-    }
-
-    memcpy(m.data, mapped_ptr(), total() * elemsize);
+    int _dims = im.dims;
+    if (_dims == 1)
+        create(im.w, im.elemsize, im.elempack, _allocator);
+    if (_dims == 2)
+        create(im.w, im.h, im.elemsize, im.elempack, _allocator);
+    if (_dims == 3)
+        create(im.w, im.h, im.c, im.elemsize, im.elempack, _allocator);
 }
 
 inline Mat VkMat::mapped() const
 {
+    if (!allocator->mappable)
+        return Mat();
+
     if (dims == 1)
         return Mat(w, mapped_ptr(), elemsize, elempack, 0);
 
@@ -1629,17 +1636,16 @@ inline Mat VkMat::mapped() const
 
 inline void* VkMat::mapped_ptr() const
 {
-    VkBufferMemory* mappable_data = allocator->mappable ? data : staging_data;
-    return (unsigned char*)mappable_data->mapped_ptr + mappable_data->offset;
+    if (!allocator->mappable)
+        return 0;
+
+    return (unsigned char*)data->mapped_ptr + data->offset;
 }
 
 inline void VkMat::addref()
 {
     if (refcount)
         NCNN_XADD(refcount, 1);
-
-    if (staging_refcount)
-        NCNN_XADD(staging_refcount, 1);
 }
 
 inline void VkMat::release()
@@ -1652,16 +1658,7 @@ inline void VkMat::release()
         }
     }
 
-    if (staging_refcount && NCNN_XADD(staging_refcount, -1) == 1)
-    {
-        if (staging_allocator && staging_data)
-        {
-            staging_allocator->fastFree(staging_data);
-        }
-    }
-
     data = 0;
-    staging_data = 0;
 
     elemsize = 0;
     elempack = 0;
@@ -1674,7 +1671,6 @@ inline void VkMat::release()
     cstep = 0;
 
     refcount = 0;
-    staging_refcount = 0;
 }
 
 inline bool VkMat::empty() const
@@ -1709,36 +1705,86 @@ inline size_t VkMat::buffer_offset() const
     return data->offset;
 }
 
-inline VkBuffer VkMat::staging_buffer() const
+inline size_t VkMat::buffer_capacity() const
 {
-    return staging_data->buffer;
-}
-
-inline size_t VkMat::staging_buffer_offset() const
-{
-    return staging_data->offset;
+    return data->capacity;
 }
 
 inline VkImageMat::VkImageMat()
-    : data(0), refcount(0), allocator(0), width(0), height(0), format(VK_FORMAT_UNDEFINED)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
 {
 }
 
-inline VkImageMat::VkImageMat(int _width, int _height, VkFormat _format, VkImageAllocator* _allocator)
-    : data(0), refcount(0), allocator(0), width(0), height(0), format(VK_FORMAT_UNDEFINED)
+inline VkImageMat::VkImageMat(int _w, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
 {
-    create(_width, _height, _format, _allocator);
+    create(_w, _elemsize, _allocator);
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
+{
+    create(_w, _h, _elemsize, _allocator);
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
+{
+    create(_w, _h, _c, _elemsize, _allocator);
+}
+
+inline VkImageMat::VkImageMat(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
+{
+    create(_w, _elemsize, _elempack, _allocator);
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
+{
+    create(_w, _h, _elemsize, _elempack, _allocator);
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(0), refcount(0), elemsize(0), elempack(0), allocator(0), dims(0), w(0), h(0), c(0)
+{
+    create(_w, _h, _c, _elemsize, _elempack, _allocator);
 }
 
 inline VkImageMat::VkImageMat(const VkImageMat& m)
-    : data(m.data), refcount(m.refcount), allocator(m.allocator), width(m.width), height(m.height), format(m.format)
+    : data(m.data), refcount(m.refcount), elemsize(m.elemsize), elempack(m.elempack), allocator(m.allocator), dims(m.dims), w(m.w), h(m.h), c(m.c)
 {
     if (refcount)
         NCNN_XADD(refcount, 1);
 }
 
-inline VkImageMat::VkImageMat(int _width, int _height, VkImageMemory* _data, VkFormat _format, VkImageAllocator* _allocator)
-    : data(_data), refcount(0), allocator(_allocator), width(_width), height(_height), format(_format)
+inline VkImageMat::VkImageMat(int _w, VkImageMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(1), w(_w), h(1), c(1)
+{
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, VkImageMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(2), w(_w), h(_h), c(1)
+{
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, int _c, VkImageMemory* _data, size_t _elemsize, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(1), allocator(_allocator), dims(3), w(_w), h(_h), c(_c)
+{
+}
+
+inline VkImageMat::VkImageMat(int _w, VkImageMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(1), w(_w), h(1), c(1)
+{
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, VkImageMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(2), w(_w), h(_h), c(1)
+{
+}
+
+inline VkImageMat::VkImageMat(int _w, int _h, int _c, VkImageMemory* _data, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+    : data(_data), refcount(0), elemsize(_elemsize), elempack(_elempack), allocator(_allocator), dims(3), w(_w), h(_h), c(_c)
 {
 }
 
@@ -1759,35 +1805,236 @@ inline VkImageMat& VkImageMat::operator=(const VkImageMat& m)
 
     data = m.data;
     refcount = m.refcount;
+    elemsize = m.elemsize;
+    elempack = m.elempack;
     allocator = m.allocator;
 
-    width = m.width;
-    height = m.height;
-    format = m.format;
+    dims = m.dims;
+    w = m.w;
+    h = m.h;
+    c = m.c;
 
     return *this;
 }
 
-inline void VkImageMat::create(int _width, int _height, VkFormat _format, VkImageAllocator* _allocator)
+inline void VkImageMat::create(int _w, size_t _elemsize, VkAllocator* _allocator)
 {
-    if (width == _width && height == _height && format == _format && allocator == _allocator)
+    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
         return;
 
     release();
 
+    elemsize = _elemsize;
+    elempack = 1;
     allocator = _allocator;
 
-    width = _width;
-    height = _height;
-    format = _format;
+    dims = 1;
+    w = _w;
+    h = 1;
+    c = 1;
 
     if (total() > 0)
     {
-        data = allocator->fastMalloc(width, height, format);
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
 
         refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
         *refcount = 1;
     }
+}
+
+inline void VkImageMat::create(int _w, int _h, size_t _elemsize, VkAllocator* _allocator)
+{
+    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
+        return;
+
+    release();
+
+    elemsize = _elemsize;
+    elempack = 1;
+    allocator = _allocator;
+
+    dims = 2;
+    w = _w;
+    h = _h;
+    c = 1;
+
+    if (total() > 0)
+    {
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
+
+        refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
+        *refcount = 1;
+    }
+}
+
+inline void VkImageMat::create(int _w, int _h, int _c, size_t _elemsize, VkAllocator* _allocator)
+{
+    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == 1 && allocator == _allocator)
+        return;
+
+    release();
+
+    elemsize = _elemsize;
+    elempack = 1;
+    allocator = _allocator;
+
+    dims = 3;
+    w = _w;
+    h = _h;
+    c = _c;
+
+    if (total() > 0)
+    {
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
+
+        refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
+        *refcount = 1;
+    }
+}
+
+inline void VkImageMat::create(int _w, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+{
+    if (dims == 1 && w == _w && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
+        return;
+
+    release();
+
+    elemsize = _elemsize;
+    elempack = _elempack;
+    allocator = _allocator;
+
+    dims = 1;
+    w = _w;
+    h = 1;
+    c = 1;
+
+    if (total() > 0)
+    {
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
+
+        refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
+        *refcount = 1;
+    }
+}
+
+inline void VkImageMat::create(int _w, int _h, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+{
+    if (dims == 2 && w == _w && h == _h && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
+        return;
+
+    release();
+
+    elemsize = _elemsize;
+    elempack = _elempack;
+    allocator = _allocator;
+
+    dims = 2;
+    w = _w;
+    h = _h;
+    c = 1;
+
+    if (total() > 0)
+    {
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
+
+        refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
+        *refcount = 1;
+    }
+}
+
+inline void VkImageMat::create(int _w, int _h, int _c, size_t _elemsize, int _elempack, VkAllocator* _allocator)
+{
+    if (dims == 3 && w == _w && h == _h && c == _c && elemsize == _elemsize && elempack == _elempack && allocator == _allocator)
+        return;
+
+    release();
+
+    elemsize = _elemsize;
+    elempack = _elempack;
+    allocator = _allocator;
+
+    dims = 3;
+    w = _w;
+    h = _h;
+    c = _c;
+
+    if (total() > 0)
+    {
+        data = allocator->fastMalloc(dims, w, h, c, elemsize, elempack);
+        if (!data)
+            return;
+
+        refcount = (int*)((unsigned char*)data + offsetof(VkImageMemory, refcount));
+        *refcount = 1;
+    }
+}
+
+inline void VkImageMat::create_like(const Mat& m, VkAllocator* _allocator)
+{
+    int _dims = m.dims;
+    if (_dims == 1)
+        create(m.w, m.elemsize, m.elempack, _allocator);
+    if (_dims == 2)
+        create(m.w, m.h, m.elemsize, m.elempack, _allocator);
+    if (_dims == 3)
+        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator);
+}
+
+inline void VkImageMat::create_like(const VkMat& m, VkAllocator* _allocator)
+{
+    int _dims = m.dims;
+    if (_dims == 1)
+        create(m.w, m.elemsize, m.elempack, _allocator);
+    if (_dims == 2)
+        create(m.w, m.h, m.elemsize, m.elempack, _allocator);
+    if (_dims == 3)
+        create(m.w, m.h, m.c, m.elemsize, m.elempack, _allocator);
+}
+
+inline void VkImageMat::create_like(const VkImageMat& im, VkAllocator* _allocator)
+{
+    int _dims = im.dims;
+    if (_dims == 1)
+        create(im.w, im.elemsize, im.elempack, _allocator);
+    if (_dims == 2)
+        create(im.w, im.h, im.elemsize, im.elempack, _allocator);
+    if (_dims == 3)
+        create(im.w, im.h, im.c, im.elemsize, im.elempack, _allocator);
+}
+
+inline Mat VkImageMat::mapped() const
+{
+    if (!allocator->mappable || !data->mapped_ptr)
+        return Mat();
+
+    if (dims == 1)
+        return Mat(w, mapped_ptr(), elemsize, elempack, 0);
+
+    if (dims == 2)
+        return Mat(w, h, mapped_ptr(), elemsize, elempack, 0);
+
+    if (dims == 3)
+        return Mat(w, h, c, mapped_ptr(), elemsize, elempack, 0);
+
+    return Mat();
+}
+
+inline void* VkImageMat::mapped_ptr() const
+{
+    if (!allocator->mappable || !data->mapped_ptr)
+        return 0;
+
+    return (unsigned char*)data->mapped_ptr + data->bind_offset;
 }
 
 inline void VkImageMat::addref()
@@ -1808,9 +2055,13 @@ inline void VkImageMat::release()
 
     data = 0;
 
-    width = 0;
-    height = 0;
-    format = VK_FORMAT_UNDEFINED;
+    elemsize = 0;
+    elempack = 0;
+
+    dims = 0;
+    w = 0;
+    h = 0;
+    c = 0;
 
     refcount = 0;
 }
@@ -1822,7 +2073,19 @@ inline bool VkImageMat::empty() const
 
 inline size_t VkImageMat::total() const
 {
-    return width * height;
+    return w * h * c;
+}
+
+inline Mat VkImageMat::shape() const
+{
+    if (dims == 1)
+        return Mat(w * elempack, (void*)0);
+    if (dims == 2)
+        return Mat(w, h * elempack, (void*)0);
+    if (dims == 3)
+        return Mat(w, h, c * elempack, (void*)0);
+
+    return Mat();
 }
 
 inline VkImage VkImageMat::image() const

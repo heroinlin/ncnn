@@ -85,12 +85,19 @@ public:
     bool use_int8_storage;
     bool use_int8_arithmetic;
 
-    //
+    // enable simd-friendly packed memory layout
+    // improve all operator performace on all arm devices, will consume more memory
+    // changes should be applied before loading network structure and weight
+    // enabled by default
     bool use_packing_layout;
 
     bool use_shader_pack8;
 
-    // enable options for cpu inference
+    // turn on for adreno
+    bool use_image_storage;
+
+    // enable bf16 data type for storage
+    // improve most operator performace on all arm devices, may consume more memory
     bool use_bf16_storage;
 };
 
