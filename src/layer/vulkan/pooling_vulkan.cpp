@@ -13,14 +13,13 @@
 // specific language governing permissions and limitations under the License.
 
 #include "pooling_vulkan.h"
-#include <float.h>
-#include <algorithm>
-#include "layer_type.h"
+
 #include "layer_shader_type.h"
+#include "layer_type.h"
+
+#include <float.h>
 
 namespace ncnn {
-
-DEFINE_LAYER_CREATOR(Pooling_vulkan)
 
 Pooling_vulkan::Pooling_vulkan()
 {
@@ -36,8 +35,9 @@ Pooling_vulkan::Pooling_vulkan()
     pipeline_pooling_global_pack8 = 0;
 }
 
-int Pooling_vulkan::create_pipeline(const Option& opt)
+int Pooling_vulkan::create_pipeline(const Option& _opt)
 {
+    Option opt = _opt;
     const Mat& shape = bottom_shapes.empty() ? Mat() : bottom_shapes[0];
     const Mat& out_shape = top_shapes.empty() ? Mat() : top_shapes[0];
 
@@ -78,36 +78,6 @@ int Pooling_vulkan::create_pipeline(const Option& opt)
         }
     }
 
-    {
-        padding = ncnn::create_layer(ncnn::LayerType::Padding);
-        padding->vkdev = vkdev;
-
-        padding->bottom_shapes.resize(1);
-        padding->bottom_shapes[0] = shape;
-        padding->top_shapes.resize(1);
-        padding->top_shapes[0] = shape_bordered;
-
-        ncnn::ParamDict pd;
-        pd.set(0, pad_top);
-        pd.set(1, pad_bottom);
-        pd.set(2, pad_left);
-        pd.set(3, pad_right);
-        pd.set(4, 0);
-
-        if (pooling_type == PoolMethod_MAX)
-        {
-            pd.set(5, -FLT_MAX);
-        }
-        else if (pooling_type == PoolMethod_AVE)
-        {
-            pd.set(5, 0.f);
-        }
-
-        padding->load_param(pd);
-
-        padding->create_pipeline(opt);
-    }
-
     int elempack = opt.use_shader_pack8 && shape.c % 8 == 0 ? 8 : shape.c % 4 == 0 ? 4 : 1;
     int out_elempack = opt.use_shader_pack8 && out_shape.c % 8 == 0 ? 8 : out_shape.c % 4 == 0 ? 4 : 1;
 
@@ -138,6 +108,43 @@ int Pooling_vulkan::create_pipeline(const Option& opt)
     if (out_shape.dims == 1) out_shape_packed = Mat(out_shape.w / out_elempack, (void*)0, out_elemsize, out_elempack);
     if (out_shape.dims == 2) out_shape_packed = Mat(out_shape.w, out_shape.h / out_elempack, (void*)0, out_elemsize, out_elempack);
     if (out_shape.dims == 3) out_shape_packed = Mat(out_shape.w, out_shape.h, out_shape.c / out_elempack, (void*)0, out_elemsize, out_elempack);
+
+    // check blob shape
+    if (!vkdev->shape_support_image_storage(shape_bordered_packed) || !vkdev->shape_support_image_storage(out_shape_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
+    }
+
+    {
+        padding = ncnn::create_layer(ncnn::LayerType::Padding);
+        padding->vkdev = vkdev;
+
+        padding->bottom_shapes.resize(1);
+        padding->bottom_shapes[0] = shape;
+        padding->top_shapes.resize(1);
+        padding->top_shapes[0] = shape_bordered;
+
+        ncnn::ParamDict pd;
+        pd.set(0, pad_top);
+        pd.set(1, pad_bottom);
+        pd.set(2, pad_left);
+        pd.set(3, pad_right);
+        pd.set(4, 0);
+
+        if (pooling_type == PoolMethod_MAX)
+        {
+            pd.set(5, -FLT_MAX);
+        }
+        else if (pooling_type == PoolMethod_AVE)
+        {
+            pd.set(5, 0.f);
+        }
+
+        padding->load_param(pd);
+
+        padding->create_pipeline(opt);
+    }
 
     if (global_pooling)
     {
@@ -248,8 +255,11 @@ int Pooling_vulkan::create_pipeline(const Option& opt)
     return 0;
 }
 
-int Pooling_vulkan::destroy_pipeline(const Option& opt)
+int Pooling_vulkan::destroy_pipeline(const Option& _opt)
 {
+    Option opt = _opt;
+    opt.use_image_storage = support_image_storage;
+
     if (padding)
     {
         padding->destroy_pipeline(opt);
@@ -319,8 +329,8 @@ int Pooling_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
         constants[9].i = top_blob.cstep;
 
         const Pipeline* pipeline = elempack == 8 ? pipeline_pooling_global_pack8
-                                 : elempack == 4 ? pipeline_pooling_global_pack4
-                                 : pipeline_pooling_global;
+                                   : elempack == 4 ? pipeline_pooling_global_pack4
+                                   : pipeline_pooling_global;
 
         cmd.record_pipeline(pipeline, bindings, constants, top_blob);
 
@@ -345,13 +355,15 @@ int Pooling_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
         Option opt_pad = opt;
         opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-        VkMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+        VkMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
         int* padding_params = padding_param_blob.mapped();
 
         padding_params[0] = pad_top;
         padding_params[1] = pad_bottom + htailpad;
         padding_params[2] = pad_left;
         padding_params[3] = pad_right + wtailpad;
+        padding_params[4] = 0;
+        padding_params[5] = 0;
 
         std::vector<VkMat> padding_inputs(2);
         padding_inputs[0] = bottom_blob;
@@ -377,13 +389,15 @@ int Pooling_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
             Option opt_pad = opt;
             opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-            VkMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+            VkMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
             int* padding_params = padding_param_blob.mapped();
 
             padding_params[0] = hpad / 2;
             padding_params[1] = hpad - hpad / 2;
             padding_params[2] = wpad / 2;
             padding_params[3] = wpad - wpad / 2;
+            padding_params[4] = 0;
+            padding_params[5] = 0;
 
             std::vector<VkMat> padding_inputs(2);
             padding_inputs[0] = bottom_blob;
@@ -403,13 +417,15 @@ int Pooling_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
             Option opt_pad = opt;
             opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-            VkMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+            VkMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
             int* padding_params = padding_param_blob.mapped();
 
             padding_params[0] = hpad - hpad / 2;
             padding_params[1] = hpad / 2;
             padding_params[2] = wpad - wpad / 2;
             padding_params[3] = wpad / 2;
+            padding_params[4] = 0;
+            padding_params[5] = 0;
 
             std::vector<VkMat> padding_inputs(2);
             padding_inputs[0] = bottom_blob;
@@ -450,8 +466,8 @@ int Pooling_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
     constants[11].i = htailpad;
 
     const Pipeline* pipeline = elempack == 8 ? pipeline_pooling_pack8
-                             : elempack == 4 ? pipeline_pooling_pack4
-                             : pipeline_pooling;
+                               : elempack == 4 ? pipeline_pooling_pack4
+                               : pipeline_pooling;
 
     cmd.record_pipeline(pipeline, bindings, constants, top_blob);
 
@@ -481,16 +497,16 @@ int Pooling_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob,
         constants[1].i = bottom_blob.w;
         constants[2].i = bottom_blob.h;
         constants[3].i = bottom_blob.c;
-        constants[4].i = 0;//bottom_blob.cstep;
+        constants[4].i = 0; //bottom_blob.cstep;
         constants[5].i = top_blob.dims;
         constants[6].i = top_blob.w;
         constants[7].i = top_blob.h;
         constants[8].i = top_blob.c;
-        constants[9].i = 0;//top_blob.cstep;
+        constants[9].i = 0; //top_blob.cstep;
 
         const Pipeline* pipeline = elempack == 8 ? pipeline_pooling_global_pack8
-                                 : elempack == 4 ? pipeline_pooling_global_pack4
-                                 : pipeline_pooling_global;
+                                   : elempack == 4 ? pipeline_pooling_global_pack4
+                                   : pipeline_pooling_global;
 
         cmd.record_pipeline(pipeline, bindings, constants, top_blob);
 
@@ -515,13 +531,15 @@ int Pooling_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob,
         Option opt_pad = opt;
         opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-        VkImageMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+        VkImageMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
         int* padding_params = padding_param_blob.mapped();
 
         padding_params[0] = pad_top;
         padding_params[1] = pad_bottom + htailpad;
         padding_params[2] = pad_left;
         padding_params[3] = pad_right + wtailpad;
+        padding_params[4] = 0;
+        padding_params[5] = 0;
 
         std::vector<VkImageMat> padding_inputs(2);
         padding_inputs[0] = bottom_blob;
@@ -547,13 +565,15 @@ int Pooling_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob,
             Option opt_pad = opt;
             opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-            VkImageMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+            VkImageMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
             int* padding_params = padding_param_blob.mapped();
 
             padding_params[0] = hpad / 2;
             padding_params[1] = hpad - hpad / 2;
             padding_params[2] = wpad / 2;
             padding_params[3] = wpad - wpad / 2;
+            padding_params[4] = 0;
+            padding_params[5] = 0;
 
             std::vector<VkImageMat> padding_inputs(2);
             padding_inputs[0] = bottom_blob;
@@ -573,13 +593,15 @@ int Pooling_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob,
             Option opt_pad = opt;
             opt_pad.blob_vkallocator = opt.workspace_vkallocator;
 
-            VkImageMat padding_param_blob(4, (size_t)4u, 1, opt.staging_vkallocator);
+            VkImageMat padding_param_blob(6, (size_t)4u, 1, opt.staging_vkallocator);
             int* padding_params = padding_param_blob.mapped();
 
             padding_params[0] = hpad - hpad / 2;
             padding_params[1] = hpad / 2;
             padding_params[2] = wpad - wpad / 2;
             padding_params[3] = wpad / 2;
+            padding_params[4] = 0;
+            padding_params[5] = 0;
 
             std::vector<VkImageMat> padding_inputs(2);
             padding_inputs[0] = bottom_blob;
@@ -610,18 +632,18 @@ int Pooling_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob,
     constants[1].i = bottom_blob_bordered.w;
     constants[2].i = bottom_blob_bordered.h;
     constants[3].i = bottom_blob_bordered.c;
-    constants[4].i = 0;//bottom_blob_bordered.cstep;
+    constants[4].i = 0; //bottom_blob_bordered.cstep;
     constants[5].i = top_blob.dims;
     constants[6].i = top_blob.w;
     constants[7].i = top_blob.h;
     constants[8].i = top_blob.c;
-    constants[9].i = 0;//top_blob.cstep;
+    constants[9].i = 0; //top_blob.cstep;
     constants[10].i = wtailpad;
     constants[11].i = htailpad;
 
     const Pipeline* pipeline = elempack == 8 ? pipeline_pooling_pack8
-                             : elempack == 4 ? pipeline_pooling_pack4
-                             : pipeline_pooling;
+                               : elempack == 4 ? pipeline_pooling_pack4
+                               : pipeline_pooling;
 
     cmd.record_pipeline(pipeline, bindings, constants, top_blob);
 

@@ -13,13 +13,11 @@
 // specific language governing permissions and limitations under the License.
 
 #include "innerproduct_vulkan.h"
-#include <algorithm>
-#include "layer_type.h"
+
 #include "layer_shader_type.h"
+#include "layer_type.h"
 
 namespace ncnn {
-
-DEFINE_LAYER_CREATOR(InnerProduct_vulkan)
 
 InnerProduct_vulkan::InnerProduct_vulkan()
 {
@@ -39,8 +37,9 @@ InnerProduct_vulkan::InnerProduct_vulkan()
     pipeline_innerproduct_pack8to1 = 0;
 }
 
-int InnerProduct_vulkan::create_pipeline(const Option& opt)
+int InnerProduct_vulkan::create_pipeline(const Option& _opt)
 {
+    Option opt = _opt;
     const Mat& shape = bottom_shapes.empty() ? Mat() : bottom_shapes[0];
     const Mat& out_shape = top_shapes.empty() ? Mat() : top_shapes[0];
 
@@ -48,22 +47,6 @@ int InnerProduct_vulkan::create_pipeline(const Option& opt)
     if (shape.dims != 0)
     {
         shape_flatten = Mat(shape.w * shape.h * shape.c, (void*)0);
-    }
-
-    {
-        flatten = ncnn::create_layer(ncnn::LayerType::Flatten);
-        flatten->vkdev = vkdev;
-
-        flatten->bottom_shapes.resize(1);
-        flatten->bottom_shapes[0] = shape;
-        flatten->top_shapes.resize(1);
-        flatten->top_shapes[0] = shape_flatten;
-
-        ncnn::ParamDict pd;
-
-        flatten->load_param(pd);
-
-        flatten->create_pipeline(opt);
     }
 
     int num_input = weight_data_size / num_output;
@@ -90,10 +73,41 @@ int InnerProduct_vulkan::create_pipeline(const Option& opt)
     }
 
     Mat shape_flatten_packed;
-    if (shape_flatten.dims == 3) shape_flatten_packed = Mat(shape_flatten.w / elempack, (void*)0, elemsize, elempack);
+    if (shape_flatten.dims == 1) shape_flatten_packed = Mat(shape_flatten.w / elempack, (void*)0, elemsize, elempack);
 
     Mat out_shape_packed;
     if (out_shape.dims == 1) out_shape_packed = Mat(out_shape.w / out_elempack, (void*)0, out_elemsize, out_elempack);
+
+    // check blob shape
+    if (!vkdev->shape_support_image_storage(shape_flatten_packed) || !vkdev->shape_support_image_storage(out_shape_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
+    }
+
+    // check weight shape
+    Mat weight_data_packed(num_input / elempack, num_output / out_elempack, (void*)0, (size_t)4 * elempack * out_elempack, elempack * out_elempack);
+    if (!vkdev->shape_support_image_storage(weight_data_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
+    }
+
+    {
+        flatten = ncnn::create_layer(ncnn::LayerType::Flatten);
+        flatten->vkdev = vkdev;
+
+        flatten->bottom_shapes.resize(1);
+        flatten->bottom_shapes[0] = shape;
+        flatten->top_shapes.resize(1);
+        flatten->top_shapes[0] = shape_flatten;
+
+        ncnn::ParamDict pd;
+
+        flatten->load_param(pd);
+
+        flatten->create_pipeline(opt);
+    }
 
     std::vector<vk_specialization_type> specializations(4 + 10);
     specializations[0].i = bias_term;
@@ -246,20 +260,20 @@ int InnerProduct_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
     {
         Mat weight_data_r2 = weight_data.reshape(num_input, num_output);
 
-        weight_data_packed.create(num_input/elempack, num_output/out_elempack, (size_t)4*elempack*out_elempack, elempack*out_elempack);
+        weight_data_packed.create(num_input / elempack, num_output / out_elempack, (size_t)4 * elempack * out_elempack, elempack * out_elempack);
 
-        for (int q=0; q+(out_elempack-1)<num_output; q+=out_elempack)
+        for (int q = 0; q + (out_elempack - 1) < num_output; q += out_elempack)
         {
-            float* g00 = weight_data_packed.row(q/out_elempack);
+            float* g00 = weight_data_packed.row(q / out_elempack);
 
-            for (int p=0; p+(elempack-1)<num_input; p+=elempack)
+            for (int p = 0; p + (elempack - 1) < num_input; p += elempack)
             {
-                for (int i=0; i<out_elempack; i++)
+                for (int i = 0; i < out_elempack; i++)
                 {
-                    const float* k0 = weight_data_r2.row(q+i);
+                    const float* k0 = weight_data_r2.row(q + i);
                     k0 += p;
 
-                    for (int j=0; j<elempack; j++)
+                    for (int j = 0; j < elempack; j++)
                     {
                         g00[0] = k0[j];
 
@@ -270,7 +284,7 @@ int InnerProduct_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
         }
     }
 
-    if (opt.use_image_storage)
+    if (support_image_storage && opt.use_image_storage)
     {
         cmd.record_upload(weight_data_packed, weight_data_gpu_image, opt);
     }
@@ -284,7 +298,7 @@ int InnerProduct_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
         Mat bias_data_packed;
         convert_packing(bias_data, bias_data_packed, out_elempack);
 
-        if (opt.use_image_storage)
+        if (support_image_storage && opt.use_image_storage)
         {
             cmd.record_upload(bias_data_packed, bias_data_gpu_image, opt);
         }
@@ -316,8 +330,8 @@ int InnerProduct_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCo
 
     if (opt.use_fp16_packed && !opt.use_fp16_storage)
     {
-        if (out_elempack == 8) out_elemsize = 8*2u;
-        if (out_elempack == 4) out_elemsize = 4*2u;
+        if (out_elempack == 8) out_elemsize = 8 * 2u;
+        if (out_elempack == 4) out_elemsize = 4 * 2u;
         if (out_elempack == 1) out_elemsize = 4u;
     }
 
@@ -405,8 +419,8 @@ int InnerProduct_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_
 
     if (opt.use_fp16_packed && !opt.use_fp16_storage)
     {
-        if (out_elempack == 8) out_elemsize = 8*2u;
-        if (out_elempack == 4) out_elemsize = 4*2u;
+        if (out_elempack == 8) out_elemsize = 8 * 2u;
+        if (out_elempack == 4) out_elemsize = 4 * 2u;
         if (out_elempack == 1) out_elemsize = 4u;
     }
 
@@ -425,12 +439,12 @@ int InnerProduct_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_
     constants[1].i = bottom_blob_flattened.w;
     constants[2].i = bottom_blob_flattened.h;
     constants[3].i = bottom_blob_flattened.c;
-    constants[4].i = 0;//bottom_blob_flattened.cstep;
+    constants[4].i = 0; //bottom_blob_flattened.cstep;
     constants[5].i = top_blob.dims;
     constants[6].i = top_blob.w;
     constants[7].i = top_blob.h;
     constants[8].i = top_blob.c;
-    constants[9].i = 0;//top_blob.cstep;
+    constants[9].i = 0; //top_blob.cstep;
 
     const Pipeline* pipeline = 0;
     if (elempack == 1 && out_elempack == 1)

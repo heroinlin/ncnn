@@ -1,3 +1,11 @@
+### Git clone ncnn repo with submodule
+
+```
+$ git clone https://github.com/Tencent/ncnn.git
+$ cd <ncnn-root-dir>
+$ git submodule update --init
+```
+
 * [Build for Linux x86](#build-for-linux-x86)
 * [Build for Windows x64 using VS2017](#build-for-windows-x64-using-visual-studio-community-2017)
 * [Build for MacOSX](#build-for-macosx)
@@ -29,7 +37,7 @@ $ mkdir -p build
 $ cd build
 
 # cmake option NCNN_VULKAN for enabling vulkan
-$ cmake -DNCNN_VULKAN=OFF ..
+$ cmake -DNCNN_VULKAN=ON ..
 
 $ make -j4
 ```
@@ -89,7 +97,7 @@ build ncnn library (replace <protobuf-root-dir> with your path)
 > cd build-vs2017
 
 # cmake option NCNN_VULKAN for enabling vulkan
-> cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%cd%/install -DProtobuf_INCLUDE_DIR=<protobuf-root-dir>/build-vs2017/install/include -DProtobuf_LIBRARIES=<protobuf-root-dir>/build-vs2017/install/lib/libprotobuf.lib -DProtobuf_PROTOC_EXECUTABLE=<protobuf-root-dir>/build-vs2017/install/bin/protoc.exe -DNCNN_VULKAN=OFF ..
+> cmake -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%cd%/install -DProtobuf_INCLUDE_DIR=<protobuf-root-dir>/build-vs2017/install/include -DProtobuf_LIBRARIES=<protobuf-root-dir>/build-vs2017/install/lib/libprotobuf.lib -DProtobuf_PROTOC_EXECUTABLE=<protobuf-root-dir>/build-vs2017/install/bin/protoc.exe -DNCNN_VULKAN=ON ..
 
 > nmake
 > nmake install
@@ -124,7 +132,7 @@ $ mkdir -p build
 $ cd build
 
 # cmake option NCNN_VULKAN for enabling vulkan
-$ cmake -DNCNN_VULKAN=OFF ..
+$ cmake -DNCNN_VULKAN=ON ..
 
 $ make -j4
 $ make install
@@ -136,13 +144,13 @@ pick build/install folder for further usage
 
 ### Build for Raspberry Pi 3
 install g++ cmake protobuf
-```
-$ cd <ncnn-root-dir>
-$ mkdir -p build
-$ cd build
-$ cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/pi3.toolchain.cmake -DPI3=ON ..
-$ make -j4
-$ make install
+```bash
+cd <ncnn-root-dir>
+mkdir -p build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/pi3.toolchain.cmake -DPI3=ON ..
+make -j4
+make install
 ```
 
 pick build/install folder for further usage
@@ -150,49 +158,26 @@ pick build/install folder for further usage
 ***
 
 ### Build for NVIDIA Jetson
-#### download Vulkan SDK from NVIDIA
-please click the `Vulkan SDK File` link on [https://developer.nvidia.com/embedded/vulkan](https://developer.nvidia.com/embedded/vulkan), at the time of writing we got `Vulkan_loader_demos_1.1.100.tar.gz`
-
-scp the downloaded SDK to your Jetson device
-
-```bash
-scp Vulkan_loader_demos_1.1.100.tar.gz USERNAME@JETSON_IP:~/
-```
-
-from this monment on, we will work on the Jetson device
+work on the Jetson device
 ```bash
 ssh USERNAME@JETSON_IP
 ```
 
-#### install Vulkan SDK
+#### install compile tools and Vulkan SDK
 
 ```bash
-cd ~/Vulkanloader_demos_1.1.100
-sudo cp loader/libvulkan.so.1.1.100 /usr/lib/aarch64-linux-gnu/
-cd /usr/lib/aarch64-linux-gnu/
-sudo rm -rf libvulkan.so.1 libvulkan.so
-sudo ln -s libvulkan.so.1.1.100 libvulkan.so
-sudo ln -s libvulkan.so.1.1.100 libvulkan.so.1
+sudo apt-get update && sudo apt-get install gcc g++ cmake git libvulkan-dev
 cd ~/
 ```
 
-#### install glslang dependency
-```
-# glslang is a dependency of Tencent/ncnn
-git clone --depth=1 https://github.com/KhronosGroup/glslang.git
-cd glslang
-# assure that SPIR-V generated from HLSL is legal for Vulkan
-./update_glslang_sources.py
-mkdir -p build && cd build
-sudo make -j`nproc` install && cd ..
-```
-
 #### compile ncnn
-```
-git clone https://github.com/Tencent/ncnn.git
+```bash
+git clone --depth=1 https://github.com/Tencent/ncnn.git
+# download submodule (glslang)
+cd ncnn && git submodule update --depth=1 --init
 # while aarch64-linux-gnu.toolchain.cmake would compile Tencent/ncnn as well
 # but why not compile with more native features w
-cd ncnn && mkdir -p build && cd build
+mkdir build && cd build
 cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/jetson.toolchain.cmake -DNCNN_VULKAN=ON -DCMAKE_BUILD_TYPE=Release ..
 make -j`nproc`
 sudo make install
@@ -243,7 +228,7 @@ you can use the pre-build ncnn-android-lib.zip from https://github.com/Tencent/n
 install android-ndk
 ```
 download android-ndk from http://developer.android.com/ndk/downloads/index.html
-$ unzip android-ndk-r18b-linux-x86_64.zip
+$ unzip android-ndk-r21d-linux-x86_64.zip
 $ export ANDROID_NDK=<your-ndk-root-path>
 ```
 (optional) drop debug compile flag to reduce binary size due to [android-ndk issue](https://github.com/android-ndk/ndk/issues/243)

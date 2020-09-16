@@ -13,16 +13,15 @@
 // specific language governing permissions and limitations under the License.
 
 #include "permute_vulkan.h"
-#include <algorithm>
+
 #include "layer_shader_type.h"
 
 namespace ncnn {
 
-DEFINE_LAYER_CREATOR(Permute_vulkan)
-
 Permute_vulkan::Permute_vulkan()
 {
     support_vulkan = true;
+    support_image_storage = true;
 
     pipeline_permute = 0;
     pipeline_permute_pack4 = 0;
@@ -35,8 +34,9 @@ Permute_vulkan::Permute_vulkan()
     pipeline_permute_pack8to1 = 0;
 }
 
-int Permute_vulkan::create_pipeline(const Option& opt)
+int Permute_vulkan::create_pipeline(const Option& _opt)
 {
+    Option opt = _opt;
     const Mat& shape = bottom_shapes.empty() ? Mat() : bottom_shapes[0];
     const Mat& out_shape = top_shapes.empty() ? Mat() : top_shapes[0];
 
@@ -78,6 +78,13 @@ int Permute_vulkan::create_pipeline(const Option& opt)
     if (out_shape.dims == 2) out_shape_packed = Mat(out_shape.w, out_shape.h / out_elempack, (void*)0, out_elemsize, out_elempack);
     if (out_shape.dims == 3) out_shape_packed = Mat(out_shape.w, out_shape.h, out_shape.c / out_elempack, (void*)0, out_elemsize, out_elempack);
 
+    // check blob shape
+    if (!vkdev->shape_support_image_storage(shape_packed) || !vkdev->shape_support_image_storage(out_shape_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
+    }
+
     std::vector<vk_specialization_type> specializations(1 + 10);
     specializations[0].i = order_type;
     specializations[1 + 0].i = shape_packed.dims;
@@ -91,7 +98,7 @@ int Permute_vulkan::create_pipeline(const Option& opt)
     specializations[1 + 8].i = out_shape_packed.c;
     specializations[1 + 9].i = out_shape_packed.cstep;
 
-    Mat local_size_xyz_bottom;// pack4to1 and pack8to1
+    Mat local_size_xyz_bottom; // pack4to1 and pack8to1
     if (shape_packed.dims == 2)
     {
         local_size_xyz_bottom.w = std::min(8, shape_packed.w);
@@ -265,8 +272,8 @@ int Permute_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
 
         if (opt.use_fp16_packed && !opt.use_fp16_storage)
         {
-            if (out_elempack == 8) out_elemsize = 8*2u;
-            if (out_elempack == 4) out_elemsize = 4*2u;
+            if (out_elempack == 8) out_elemsize = 8 * 2u;
+            if (out_elempack == 4) out_elemsize = 4 * 2u;
             if (out_elempack == 1) out_elemsize = 4u;
         }
 
@@ -324,8 +331,8 @@ int Permute_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
 
         if (opt.use_fp16_packed && !opt.use_fp16_storage)
         {
-            if (out_elempack == 8) out_elemsize = 8*2u;
-            if (out_elempack == 4) out_elemsize = 4*2u;
+            if (out_elempack == 8) out_elemsize = 8 * 2u;
+            if (out_elempack == 4) out_elemsize = 4 * 2u;
             if (out_elempack == 1) out_elemsize = 4u;
         }
 
@@ -349,6 +356,170 @@ int Permute_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkCompute
     constants[7].i = top_blob.h;
     constants[8].i = top_blob.c;
     constants[9].i = top_blob.cstep;
+
+    if (elempack == 1 && out_elempack == 1)
+    {
+        cmd.record_pipeline(pipeline_permute, bindings, constants, top_blob);
+    }
+    else if (elempack == 4 && out_elempack == 4)
+    {
+        cmd.record_pipeline(pipeline_permute_pack4, bindings, constants, top_blob);
+    }
+    else if (elempack == 1 && out_elempack == 4)
+    {
+        cmd.record_pipeline(pipeline_permute_pack1to4, bindings, constants, top_blob);
+    }
+    else if (elempack == 4 && out_elempack == 1)
+    {
+        cmd.record_pipeline(pipeline_permute_pack4to1, bindings, constants, bottom_blob);
+    }
+    else if (elempack == 8 && out_elempack == 8)
+    {
+        cmd.record_pipeline(pipeline_permute_pack8, bindings, constants, top_blob);
+    }
+    else if (elempack == 1 && out_elempack == 8)
+    {
+        cmd.record_pipeline(pipeline_permute_pack1to8, bindings, constants, top_blob);
+    }
+    else if (elempack == 4 && out_elempack == 8)
+    {
+        cmd.record_pipeline(pipeline_permute_pack4to8, bindings, constants, top_blob);
+    }
+    else if (elempack == 8 && out_elempack == 4)
+    {
+        cmd.record_pipeline(pipeline_permute_pack8to4, bindings, constants, top_blob);
+    }
+    else if (elempack == 8 && out_elempack == 1)
+    {
+        cmd.record_pipeline(pipeline_permute_pack8to1, bindings, constants, bottom_blob);
+    }
+
+    return 0;
+}
+
+int Permute_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top_blob, VkCompute& cmd, const Option& opt) const
+{
+    int w = bottom_blob.w;
+    int h = bottom_blob.h;
+    int channels = bottom_blob.c;
+    size_t elemsize = bottom_blob.elemsize;
+    int elempack = bottom_blob.elempack;
+
+    int dims = bottom_blob.dims;
+
+    if (dims == 1 || order_type == 0)
+    {
+        top_blob = bottom_blob;
+        return 0;
+    }
+
+    int out_elempack;
+    size_t out_elemsize;
+
+    if (dims == 2)
+    {
+        // order_type
+        // 0 = w h
+        // 1 = h w
+
+        int outw;
+        int outh;
+
+        // if (order_type == 1)
+        {
+            outw = h * elempack;
+            outh = w;
+        }
+
+        out_elempack = opt.use_shader_pack8 && outh % 8 == 0 ? 8 : outh % 4 == 0 ? 4 : 1;
+        out_elemsize = elemsize / elempack * out_elempack;
+
+        if (opt.use_fp16_packed && !opt.use_fp16_storage)
+        {
+            if (out_elempack == 8) out_elemsize = 8 * 2u;
+            if (out_elempack == 4) out_elemsize = 4 * 2u;
+            if (out_elempack == 1) out_elemsize = 4u;
+        }
+
+        top_blob.create(outw, outh / out_elempack, out_elemsize, out_elempack, opt.blob_vkallocator);
+        if (top_blob.empty())
+            return -100;
+    }
+    else // if (dims == 3)
+    {
+        // order_type
+        // 0 = w h c
+        // 1 = h w c
+        // 2 = w c h
+        // 3 = c w h
+        // 4 = h c w
+        // 5 = c h w
+
+        int outw;
+        int outh;
+        int outc;
+
+        if (order_type == 1)
+        {
+            outw = h;
+            outh = w;
+            outc = channels * elempack;
+        }
+        else if (order_type == 2)
+        {
+            outw = w;
+            outh = channels * elempack;
+            outc = h;
+        }
+        else if (order_type == 3)
+        {
+            outw = channels * elempack;
+            outh = w;
+            outc = h;
+        }
+        else if (order_type == 4)
+        {
+            outw = h;
+            outh = channels * elempack;
+            outc = w;
+        }
+        else // if (order_type == 5)
+        {
+            outw = channels * elempack;
+            outh = h;
+            outc = w;
+        }
+
+        out_elempack = opt.use_shader_pack8 && outc % 8 == 0 ? 8 : outc % 4 == 0 ? 4 : 1;
+        out_elemsize = elemsize / elempack * out_elempack;
+
+        if (opt.use_fp16_packed && !opt.use_fp16_storage)
+        {
+            if (out_elempack == 8) out_elemsize = 8 * 2u;
+            if (out_elempack == 4) out_elemsize = 4 * 2u;
+            if (out_elempack == 1) out_elemsize = 4u;
+        }
+
+        top_blob.create(outw, outh, outc / out_elempack, out_elemsize, out_elempack, opt.blob_vkallocator);
+        if (top_blob.empty())
+            return -100;
+    }
+
+    std::vector<VkImageMat> bindings(2);
+    bindings[0] = bottom_blob;
+    bindings[1] = top_blob;
+
+    std::vector<vk_constant_type> constants(10);
+    constants[0].i = bottom_blob.dims;
+    constants[1].i = bottom_blob.w;
+    constants[2].i = bottom_blob.h;
+    constants[3].i = bottom_blob.c;
+    constants[4].i = 0; //bottom_blob.cstep;
+    constants[5].i = top_blob.dims;
+    constants[6].i = top_blob.w;
+    constants[7].i = top_blob.h;
+    constants[8].i = top_blob.c;
+    constants[9].i = 0; //top_blob.cstep;
 
     if (elempack == 1 && out_elempack == 1)
     {

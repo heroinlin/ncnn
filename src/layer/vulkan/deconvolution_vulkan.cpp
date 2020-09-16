@@ -13,13 +13,11 @@
 // specific language governing permissions and limitations under the License.
 
 #include "deconvolution_vulkan.h"
-#include <algorithm>
-#include "layer_type.h"
+
 #include "layer_shader_type.h"
+#include "layer_type.h"
 
 namespace ncnn {
-
-DEFINE_LAYER_CREATOR(Deconvolution_vulkan)
 
 Deconvolution_vulkan::Deconvolution_vulkan()
 {
@@ -41,8 +39,9 @@ Deconvolution_vulkan::Deconvolution_vulkan()
     pipeline_deconvolution_pack8to1 = 0;
 }
 
-int Deconvolution_vulkan::create_pipeline(const Option& opt)
+int Deconvolution_vulkan::create_pipeline(const Option& _opt)
 {
+    Option opt = _opt;
     const Mat& shape = bottom_shapes.empty() ? Mat() : bottom_shapes[0];
     const Mat& out_shape = top_shapes.empty() ? Mat() : top_shapes[0];
 
@@ -61,6 +60,55 @@ int Deconvolution_vulkan::create_pipeline(const Option& opt)
         out_shape_bordered = Mat(outw, outh, out_shape.c, (void*)0);
 
         out_shape_bordered_adj = Mat(outw + output_pad_right, outh + output_pad_bottom, out_shape.c, (void*)0);
+    }
+
+    const int maxk = kernel_w * kernel_h;
+    int num_input = weight_data_size / maxk / num_output;
+
+    int elempack = opt.use_shader_pack8 && num_input % 8 == 0 ? 8 : num_input % 4 == 0 ? 4 : 1;
+    int out_elempack = opt.use_shader_pack8 && num_output % 8 == 0 ? 8 : num_output % 4 == 0 ? 4 : 1;
+
+    size_t elemsize;
+    size_t out_elemsize;
+    if (opt.use_fp16_storage)
+    {
+        elemsize = elempack * 2u;
+        out_elemsize = out_elempack * 2u;
+    }
+    else if (opt.use_fp16_packed)
+    {
+        elemsize = elempack == 1 ? 4u : elempack * 2u;
+        out_elemsize = out_elempack == 1 ? 4u : out_elempack * 2u;
+    }
+    else
+    {
+        elemsize = elempack * 4u;
+        out_elemsize = out_elempack * 4u;
+    }
+
+    Mat shape_packed;
+    if (shape.dims == 1) shape_packed = Mat(shape.w / elempack, (void*)0, elemsize, elempack);
+    if (shape.dims == 2) shape_packed = Mat(shape.w, shape.h / elempack, (void*)0, elemsize, elempack);
+    if (shape.dims == 3) shape_packed = Mat(shape.w, shape.h, shape.c / elempack, (void*)0, elemsize, elempack);
+
+    Mat out_shape_bordered_packed;
+    if (out_shape_bordered.dims == 1) out_shape_bordered_packed = Mat(out_shape_bordered.w / out_elempack, (void*)0, out_elemsize, out_elempack);
+    if (out_shape_bordered.dims == 2) out_shape_bordered_packed = Mat(out_shape_bordered.w, out_shape_bordered.h / out_elempack, (void*)0, out_elemsize, out_elempack);
+    if (out_shape_bordered.dims == 3) out_shape_bordered_packed = Mat(out_shape_bordered.w, out_shape_bordered.h, out_shape_bordered.c / out_elempack, (void*)0, out_elemsize, out_elempack);
+
+    // check blob shape
+    if (!vkdev->shape_support_image_storage(shape_packed) || !vkdev->shape_support_image_storage(out_shape_bordered_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
+    }
+
+    // check weight shape
+    Mat weight_data_packed(maxk, num_input / elempack, num_output / out_elempack, (void*)0, (size_t)4 * elempack * out_elempack, elempack * out_elempack);
+    if (!vkdev->shape_support_image_storage(weight_data_packed))
+    {
+        support_image_storage = false;
+        opt.use_image_storage = false;
     }
 
     {
@@ -122,40 +170,6 @@ int Deconvolution_vulkan::create_pipeline(const Option& opt)
 
         output_crop->create_pipeline(opt);
     }
-
-    const int maxk = kernel_w * kernel_h;
-    int num_input = weight_data_size / maxk / num_output;
-
-    int elempack = opt.use_shader_pack8 && num_input % 8 == 0 ? 8 : num_input % 4 == 0 ? 4 : 1;
-    int out_elempack = opt.use_shader_pack8 && num_output % 8 == 0 ? 8 : num_output % 4 == 0 ? 4 : 1;
-
-    size_t elemsize;
-    size_t out_elemsize;
-    if (opt.use_fp16_storage)
-    {
-        elemsize = elempack * 2u;
-        out_elemsize = out_elempack * 2u;
-    }
-    else if (opt.use_fp16_packed)
-    {
-        elemsize = elempack == 1 ? 4u : elempack * 2u;
-        out_elemsize = out_elempack == 1 ? 4u : out_elempack * 2u;
-    }
-    else
-    {
-        elemsize = elempack * 4u;
-        out_elemsize = out_elempack * 4u;
-    }
-
-    Mat shape_packed;
-    if (shape.dims == 1) shape_packed = Mat(shape.w / elempack, (void*)0, elemsize, elempack);
-    if (shape.dims == 2) shape_packed = Mat(shape.w, shape.h / elempack, (void*)0, elemsize, elempack);
-    if (shape.dims == 3) shape_packed = Mat(shape.w, shape.h, shape.c / elempack, (void*)0, elemsize, elempack);
-
-    Mat out_shape_bordered_packed;
-    if (out_shape_bordered.dims == 1) out_shape_bordered_packed = Mat(out_shape_bordered.w / out_elempack, (void*)0, out_elemsize, out_elempack);
-    if (out_shape_bordered.dims == 2) out_shape_bordered_packed = Mat(out_shape_bordered.w, out_shape_bordered.h / out_elempack, (void*)0, out_elemsize, out_elempack);
-    if (out_shape_bordered.dims == 3) out_shape_bordered_packed = Mat(out_shape_bordered.w, out_shape_bordered.h, out_shape_bordered.c / out_elempack, (void*)0, out_elemsize, out_elempack);
 
     std::vector<vk_specialization_type> specializations(10 + 10);
     specializations[0].i = kernel_w;
@@ -343,11 +357,11 @@ int Deconvolution_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
         float* pt = weight_data_transposed;
         const float* p = weight_data;
 
-        for (int i=0; i<num_input*num_output; i++)
+        for (int i = 0; i < num_input * num_output; i++)
         {
-            for (int k=0; k<maxk; k++)
+            for (int k = 0; k < maxk; k++)
             {
-                pt[maxk-1 - k] = p[k];
+                pt[maxk - 1 - k] = p[k];
             }
 
             p += maxk;
@@ -361,26 +375,25 @@ int Deconvolution_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
     {
         Mat weight_data_r2 = weight_data_transposed.reshape(maxk, num_input, num_output);
 
-        weight_data_packed.create(maxk, num_input/elempack, num_output/out_elempack, (size_t)4*elempack*out_elempack, elempack*out_elempack);
+        weight_data_packed.create(maxk, num_input / elempack, num_output / out_elempack, (size_t)4 * elempack * out_elempack, elempack * out_elempack);
 
-        for (int q=0; q+(out_elempack-1)<num_output; q+=out_elempack)
+        for (int q = 0; q + (out_elempack - 1) < num_output; q += out_elempack)
         {
-            Mat g0 = weight_data_packed.channel(q/out_elempack);
+            Mat g0 = weight_data_packed.channel(q / out_elempack);
 
-            for (int p=0; p+(elempack-1)<num_input; p+=elempack)
+            for (int p = 0; p + (elempack - 1) < num_input; p += elempack)
             {
-                float* g00 = g0.row(p/elempack);
+                float* g00 = g0.row(p / elempack);
 
-                for (int k=0; k<maxk; k++)
+                for (int k = 0; k < maxk; k++)
                 {
-
-                    for (int i=0; i<out_elempack; i++)
+                    for (int i = 0; i < out_elempack; i++)
                     {
-                        const Mat k0 = weight_data_r2.channel(q+i);
+                        const Mat k0 = weight_data_r2.channel(q + i);
 
-                        for (int j=0; j<elempack; j++)
+                        for (int j = 0; j < elempack; j++)
                         {
-                            const float* k00 = k0.row(p+j);
+                            const float* k00 = k0.row(p + j);
 
                             g00[0] = k00[k];
 
@@ -392,7 +405,7 @@ int Deconvolution_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
         }
     }
 
-    if (opt.use_image_storage)
+    if (support_image_storage && opt.use_image_storage)
     {
         cmd.record_upload(weight_data_packed, weight_data_gpu_image, opt);
     }
@@ -406,7 +419,7 @@ int Deconvolution_vulkan::upload_model(VkTransfer& cmd, const Option& opt)
         Mat bias_data_packed;
         convert_packing(bias_data, bias_data_packed, out_elempack);
 
-        if (opt.use_image_storage)
+        if (support_image_storage && opt.use_image_storage)
         {
             cmd.record_upload(bias_data_packed, bias_data_gpu_image, opt);
         }
@@ -436,8 +449,8 @@ int Deconvolution_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkC
 
     if (opt.use_fp16_packed && !opt.use_fp16_storage)
     {
-        if (out_elempack == 8) out_elemsize = 8*2u;
-        if (out_elempack == 4) out_elemsize = 4*2u;
+        if (out_elempack == 8) out_elemsize = 8 * 2u;
+        if (out_elempack == 4) out_elemsize = 4 * 2u;
         if (out_elempack == 1) out_elemsize = 4u;
     }
 
@@ -569,7 +582,7 @@ int Deconvolution_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkC
             crop_params[2] = 0;
             crop_params[3] = top_blob_bordered_adj.w - wcut;
             crop_params[4] = top_blob_bordered_adj.h - hcut;
-            crop_params[5] = top_blob_bordered_adj.c;
+            crop_params[5] = top_blob_bordered_adj.c * out_elempack;
         }
         else if (pad_left == -234 || pad_right == -234 || pad_top == -234 || pad_bottom == -234)
         {
@@ -579,7 +592,7 @@ int Deconvolution_vulkan::forward(const VkMat& bottom_blob, VkMat& top_blob, VkC
             crop_params[2] = 0;
             crop_params[3] = top_blob_bordered_adj.w - wcut;
             crop_params[4] = top_blob_bordered_adj.h - hcut;
-            crop_params[5] = top_blob_bordered_adj.c;
+            crop_params[5] = top_blob_bordered_adj.c * out_elempack;
         }
 
         std::vector<VkMat> crop_inputs(2);
@@ -629,8 +642,8 @@ int Deconvolution_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top
 
     if (opt.use_fp16_packed && !opt.use_fp16_storage)
     {
-        if (out_elempack == 8) out_elemsize = 8*2u;
-        if (out_elempack == 4) out_elemsize = 4*2u;
+        if (out_elempack == 8) out_elemsize = 8 * 2u;
+        if (out_elempack == 4) out_elemsize = 4 * 2u;
         if (out_elempack == 1) out_elemsize = 4u;
     }
 
@@ -657,12 +670,12 @@ int Deconvolution_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top
     constants[1].i = bottom_blob.w;
     constants[2].i = bottom_blob.h;
     constants[3].i = bottom_blob.c;
-    constants[4].i = 0;//bottom_blob.cstep;
+    constants[4].i = 0; //bottom_blob.cstep;
     constants[5].i = top_blob_bordered.dims;
     constants[6].i = top_blob_bordered.w;
     constants[7].i = top_blob_bordered.h;
     constants[8].i = top_blob_bordered.c;
-    constants[9].i = 0;//top_blob_bordered.cstep;
+    constants[9].i = 0; //top_blob_bordered.cstep;
 
     const Pipeline* pipeline = 0;
     if (elempack == 1 && out_elempack == 1)
@@ -762,7 +775,7 @@ int Deconvolution_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top
             crop_params[2] = 0;
             crop_params[3] = top_blob_bordered_adj.w - wcut;
             crop_params[4] = top_blob_bordered_adj.h - hcut;
-            crop_params[5] = top_blob_bordered_adj.c;
+            crop_params[5] = top_blob_bordered_adj.c * out_elempack;
         }
         else if (pad_left == -234 || pad_right == -234 || pad_top == -234 || pad_bottom == -234)
         {
@@ -772,7 +785,7 @@ int Deconvolution_vulkan::forward(const VkImageMat& bottom_blob, VkImageMat& top
             crop_params[2] = 0;
             crop_params[3] = top_blob_bordered_adj.w - wcut;
             crop_params[4] = top_blob_bordered_adj.h - hcut;
-            crop_params[5] = top_blob_bordered_adj.c;
+            crop_params[5] = top_blob_bordered_adj.c * out_elempack;
         }
 
         std::vector<VkImageMat> crop_inputs(2);

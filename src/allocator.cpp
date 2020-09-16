@@ -14,8 +14,6 @@
 
 #include "allocator.h"
 
-#include <stdio.h>
-#include <algorithm>
 #include "gpu.h"
 #include "pipeline.h"
 
@@ -25,14 +23,13 @@
 
 namespace ncnn {
 
-Allocator::~Allocator() 
+Allocator::~Allocator()
 {
-
 }
 
 PoolAllocator::PoolAllocator()
 {
-    size_compare_ratio = 192;// 0.75f * 256
+    size_compare_ratio = 192; // 0.75f * 256
 }
 
 PoolAllocator::~PoolAllocator()
@@ -41,12 +38,12 @@ PoolAllocator::~PoolAllocator()
 
     if (!payouts.empty())
     {
-        fprintf(stderr, "FATAL ERROR! pool allocator destroyed too early\n");
-        std::list< std::pair<size_t, void*> >::iterator it = payouts.begin();
-        for (; it != payouts.end(); it++)
+        NCNN_LOGE("FATAL ERROR! pool allocator destroyed too early");
+        std::list<std::pair<size_t, void*> >::iterator it = payouts.begin();
+        for (; it != payouts.end(); ++it)
         {
             void* ptr = it->second;
-            fprintf(stderr, "%p still in use\n", ptr);
+            NCNN_LOGE("%p still in use", ptr);
         }
     }
 }
@@ -55,8 +52,8 @@ void PoolAllocator::clear()
 {
     budgets_lock.lock();
 
-    std::list< std::pair<size_t, void*> >::iterator it = budgets.begin();
-    for (; it != budgets.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = budgets.begin();
+    for (; it != budgets.end(); ++it)
     {
         void* ptr = it->second;
         ncnn::fastFree(ptr);
@@ -70,7 +67,7 @@ void PoolAllocator::set_size_compare_ratio(float scr)
 {
     if (scr < 0.f || scr > 1.f)
     {
-        fprintf(stderr, "invalid size compare ratio %f\n", scr);
+        NCNN_LOGE("invalid size compare ratio %f", scr);
         return;
     }
 
@@ -82,8 +79,8 @@ void* PoolAllocator::fastMalloc(size_t size)
     budgets_lock.lock();
 
     // find free budget
-    std::list< std::pair<size_t, void*> >::iterator it = budgets.begin();
-    for (; it != budgets.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = budgets.begin();
+    for (; it != budgets.end(); ++it)
     {
         size_t bs = it->first;
 
@@ -125,8 +122,8 @@ void PoolAllocator::fastFree(void* ptr)
     payouts_lock.lock();
 
     // return to budgets
-    std::list< std::pair<size_t, void*> >::iterator it = payouts.begin();
-    for (; it != payouts.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = payouts.begin();
+    for (; it != payouts.end(); ++it)
     {
         if (it->second == ptr)
         {
@@ -148,13 +145,13 @@ void PoolAllocator::fastFree(void* ptr)
 
     payouts_lock.unlock();
 
-    fprintf(stderr, "FATAL ERROR! pool allocator get wild %p\n", ptr);
+    NCNN_LOGE("FATAL ERROR! pool allocator get wild %p", ptr);
     ncnn::fastFree(ptr);
 }
 
 UnlockedPoolAllocator::UnlockedPoolAllocator()
 {
-    size_compare_ratio = 192;// 0.75f * 256
+    size_compare_ratio = 192; // 0.75f * 256
 }
 
 UnlockedPoolAllocator::~UnlockedPoolAllocator()
@@ -163,20 +160,20 @@ UnlockedPoolAllocator::~UnlockedPoolAllocator()
 
     if (!payouts.empty())
     {
-        fprintf(stderr, "FATAL ERROR! unlocked pool allocator destroyed too early\n");
-        std::list< std::pair<size_t, void*> >::iterator it = payouts.begin();
-        for (; it != payouts.end(); it++)
+        NCNN_LOGE("FATAL ERROR! unlocked pool allocator destroyed too early");
+        std::list<std::pair<size_t, void*> >::iterator it = payouts.begin();
+        for (; it != payouts.end(); ++it)
         {
             void* ptr = it->second;
-            fprintf(stderr, "%p still in use\n", ptr);
+            NCNN_LOGE("%p still in use", ptr);
         }
     }
 }
 
 void UnlockedPoolAllocator::clear()
 {
-    std::list< std::pair<size_t, void*> >::iterator it = budgets.begin();
-    for (; it != budgets.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = budgets.begin();
+    for (; it != budgets.end(); ++it)
     {
         void* ptr = it->second;
         ncnn::fastFree(ptr);
@@ -188,7 +185,7 @@ void UnlockedPoolAllocator::set_size_compare_ratio(float scr)
 {
     if (scr < 0.f || scr > 1.f)
     {
-        fprintf(stderr, "invalid size compare ratio %f\n", scr);
+        NCNN_LOGE("invalid size compare ratio %f", scr);
         return;
     }
 
@@ -198,8 +195,8 @@ void UnlockedPoolAllocator::set_size_compare_ratio(float scr)
 void* UnlockedPoolAllocator::fastMalloc(size_t size)
 {
     // find free budget
-    std::list< std::pair<size_t, void*> >::iterator it = budgets.begin();
-    for (; it != budgets.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = budgets.begin();
+    for (; it != budgets.end(); ++it)
     {
         size_t bs = it->first;
 
@@ -227,8 +224,8 @@ void* UnlockedPoolAllocator::fastMalloc(size_t size)
 void UnlockedPoolAllocator::fastFree(void* ptr)
 {
     // return to budgets
-    std::list< std::pair<size_t, void*> >::iterator it = payouts.begin();
-    for (; it != payouts.end(); it++)
+    std::list<std::pair<size_t, void*> >::iterator it = payouts.begin();
+    for (; it != payouts.end(); ++it)
     {
         if (it->second == ptr)
         {
@@ -242,14 +239,16 @@ void UnlockedPoolAllocator::fastFree(void* ptr)
         }
     }
 
-    fprintf(stderr, "FATAL ERROR! unlocked pool allocator get wild %p\n", ptr);
+    NCNN_LOGE("FATAL ERROR! unlocked pool allocator get wild %p", ptr);
     ncnn::fastFree(ptr);
 }
 
 #if NCNN_VULKAN
-VkAllocator::VkAllocator(const VulkanDevice* _vkdev) : vkdev(_vkdev)
+VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
+    : vkdev(_vkdev)
 {
-    memory_type_index = (uint32_t)-1;
+    buffer_memory_type_index = (uint32_t)-1;
+    image_memory_type_index = (uint32_t)-1;
     mappable = false;
     coherent = false;
 }
@@ -279,7 +278,7 @@ int VkAllocator::flush(VkBufferMemory* ptr)
     VkResult ret = vkFlushMappedMemoryRanges(vkdev->vkdevice(), 1, &mappedMemoryRange);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkFlushMappedMemoryRanges failed %d\n", ret);
+        NCNN_LOGE("vkFlushMappedMemoryRanges failed %d", ret);
         return -1;
     }
 
@@ -301,7 +300,7 @@ int VkAllocator::invalidate(VkBufferMemory* ptr)
     VkResult ret = vkInvalidateMappedMemoryRanges(vkdev->vkdevice(), 1, &mappedMemoryRange);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkInvalidateMappedMemoryRanges failed %d\n", ret);
+        NCNN_LOGE("vkInvalidateMappedMemoryRanges failed %d", ret);
         return -1;
     }
 
@@ -324,14 +323,14 @@ VkBuffer VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage)
     VkResult ret = vkCreateBuffer(vkdev->vkdevice(), &bufferCreateInfo, 0, &buffer);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateBuffer failed %d\n", ret);
+        NCNN_LOGE("vkCreateBuffer failed %d", ret);
         return 0;
     }
 
     return buffer;
 }
 
-VkDeviceMemory VkAllocator::allocate_memory(size_t size)
+VkDeviceMemory VkAllocator::allocate_memory(size_t size, uint32_t memory_type_index)
 {
     VkMemoryAllocateInfo memoryAllocateInfo;
     memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -343,14 +342,14 @@ VkDeviceMemory VkAllocator::allocate_memory(size_t size)
     VkResult ret = vkAllocateMemory(vkdev->vkdevice(), &memoryAllocateInfo, 0, &memory);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkAllocateMemory failed %d\n", ret);
+        NCNN_LOGE("vkAllocateMemory failed %d", ret);
         return 0;
     }
 
     return memory;
 }
 
-VkDeviceMemory VkAllocator::allocate_dedicated_memory(size_t size, VkImage image, VkBuffer buffer)
+VkDeviceMemory VkAllocator::allocate_dedicated_memory(size_t size, uint32_t memory_type_index, VkImage image, VkBuffer buffer)
 {
     VkMemoryAllocateInfo memoryAllocateInfo;
     memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -369,7 +368,7 @@ VkDeviceMemory VkAllocator::allocate_dedicated_memory(size_t size, VkImage image
     VkResult ret = vkAllocateMemory(vkdev->vkdevice(), &memoryAllocateInfo, 0, &memory);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkAllocateMemory failed %d\n", ret);
+        NCNN_LOGE("vkAllocateMemory failed %d", ret);
         return 0;
     }
 
@@ -401,7 +400,7 @@ VkImage VkAllocator::create_image(VkImageType type, int width, int height, int d
     VkResult ret = vkCreateImage(vkdev->vkdevice(), &imageCreateInfo, 0, &image);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateImage failed %d %d %d %d %d %d %d %d\n", ret, type, width, height, depth, format, tiling, usage);
+        NCNN_LOGE("vkCreateImage failed %d %d %d %d %d %d %d %d", ret, type, width, height, depth, format, tiling, usage);
         return 0;
     }
 
@@ -431,7 +430,7 @@ VkImageView VkAllocator::create_imageview(VkImageViewType type, VkImage image, V
     VkResult ret = vkCreateImageView(vkdev->vkdevice(), &imageViewCreateInfo, 0, &imageview);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateImageView failed %d\n", ret);
+        NCNN_LOGE("vkCreateImageView failed %d", ret);
         return 0;
     }
 
@@ -455,7 +454,8 @@ static inline size_t least_common_multiple(size_t a, size_t b)
     return lcm;
 }
 
-VkBlobAllocator::VkBlobAllocator(const VulkanDevice* _vkdev) : VkAllocator(_vkdev)
+VkBlobAllocator::VkBlobAllocator(const VulkanDevice* _vkdev)
+    : VkAllocator(_vkdev)
 {
     buffer_offset_alignment = vkdev->info.buffer_offset_alignment;
     bind_memory_offset_alignment = vkdev->info.buffer_image_granularity;
@@ -470,7 +470,7 @@ VkBlobAllocator::VkBlobAllocator(const VulkanDevice* _vkdev) : VkAllocator(_vkde
         buffer_offset_alignment = least_common_multiple(buffer_offset_alignment, vkdev->info.non_coherent_atom_size);
     }
 
-    block_size = alignSize(16 * 1024 * 1024, buffer_offset_alignment);// 16M
+    block_size = alignSize(16 * 1024 * 1024, buffer_offset_alignment); // 16M
 }
 
 VkBlobAllocator::~VkBlobAllocator()
@@ -480,18 +480,18 @@ VkBlobAllocator::~VkBlobAllocator()
 
 void VkBlobAllocator::clear()
 {
-//     fprintf(stderr, "VkBlobAllocator %lu\n", buffer_blocks.size());
+    //     NCNN_LOGE("VkBlobAllocator %lu", buffer_blocks.size());
 
-    for (size_t i=0; i<buffer_blocks.size(); i++)
+    for (size_t i = 0; i < buffer_blocks.size(); i++)
     {
         VkBufferMemory* ptr = buffer_blocks[i];
 
-//         std::list< std::pair<size_t, size_t> >::iterator it = buffer_budgets[i].begin();
-//         while (it != buffer_budgets[i].end())
-//         {
-//             fprintf(stderr, "VkBlobAllocator budget %p %lu %lu\n", ptr->buffer, it->first, it->second);
-//             it++;
-//         }
+        //         std::list< std::pair<size_t, size_t> >::iterator it = buffer_budgets[i].begin();
+        //         while (it != buffer_budgets[i].end())
+        //         {
+        //             NCNN_LOGE("VkBlobAllocator budget %p %lu %lu", ptr->buffer, it->first, it->second);
+        //             it++;
+        //         }
 
         if (mappable)
             vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
@@ -505,16 +505,16 @@ void VkBlobAllocator::clear()
 
     buffer_budgets.clear();
 
-    for (size_t i=0; i<image_memory_blocks.size(); i++)
+    for (size_t i = 0; i < image_memory_blocks.size(); i++)
     {
         VkDeviceMemory memory = image_memory_blocks[i];
 
-//         std::list< std::pair<size_t, size_t> >::iterator it = image_memory_budgets[i].begin();
-//         while (it != image_memory_budgets[i].end())
-//         {
-//             fprintf(stderr, "VkBlobAllocator budget %p %lu %lu\n", memory, it->first, it->second);
-//             it++;
-//         }
+        //         std::list< std::pair<size_t, size_t> >::iterator it = image_memory_budgets[i].begin();
+        //         while (it != image_memory_budgets[i].end())
+        //         {
+        //             NCNN_LOGE("VkBlobAllocator budget %p %lu %lu", memory, it->first, it->second);
+        //             it++;
+        //         }
 
         vkFreeMemory(vkdev->vkdevice(), memory, 0);
     }
@@ -530,9 +530,9 @@ VkBufferMemory* VkBlobAllocator::fastMalloc(size_t size)
     const int buffer_block_count = buffer_blocks.size();
 
     // find first spare space in buffer_blocks
-    for (int i=0; i<buffer_block_count; i++)
+    for (int i = 0; i < buffer_block_count; i++)
     {
-        std::list< std::pair<size_t, size_t> >::iterator it = buffer_budgets[i].begin();
+        std::list<std::pair<size_t, size_t> >::iterator it = buffer_budgets[i].begin();
         while (it != buffer_budgets[i].end())
         {
             size_t budget_size = it->second;
@@ -564,7 +564,7 @@ VkBufferMemory* VkBlobAllocator::fastMalloc(size_t size)
                 it->second -= aligned_size;
             }
 
-//             fprintf(stderr, "VkBlobAllocator M %p +%lu %lu\n", ptr->buffer, ptr->offset, ptr->capacity);
+            //             NCNN_LOGE("VkBlobAllocator M %p +%lu %lu", ptr->buffer, ptr->offset, ptr->capacity);
 
             return ptr;
         }
@@ -584,24 +584,24 @@ VkBufferMemory* VkBlobAllocator::fastMalloc(size_t size)
     vkGetBufferMemoryRequirements(vkdev->vkdevice(), block->buffer, &memoryRequirements);
 
     // setup memory type and alignment
-    if (memory_type_index == (uint32_t)-1)
+    if (buffer_memory_type_index == (uint32_t)-1)
     {
         if (vkdev->info.type == 1)
         {
             // integrated gpu, prefer unified memory
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
         else
         {
             // discrete gpu, device local
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 
-        mappable = vkdev->is_mappable(memory_type_index);
-        coherent = vkdev->is_coherent(memory_type_index);
+        mappable = vkdev->is_mappable(buffer_memory_type_index);
+        coherent = vkdev->is_coherent(buffer_memory_type_index);
     }
 
-    block->memory = allocate_memory(memoryRequirements.size);
+    block->memory = allocate_memory(memoryRequirements.size, buffer_memory_type_index);
 
     // ignore memoryRequirements.alignment as we always bind at zero offset
     vkBindBufferMemory(vkdev->vkdevice(), block->buffer, block->memory, 0);
@@ -626,26 +626,26 @@ VkBufferMemory* VkBlobAllocator::fastMalloc(size_t size)
     ptr->stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     // adjust buffer_budgets
-    std::list< std::pair<size_t, size_t> > budget;
+    std::list<std::pair<size_t, size_t> > budget;
     if (new_block_size > aligned_size)
     {
         budget.push_back(std::make_pair(aligned_size, new_block_size - aligned_size));
     }
     buffer_budgets.push_back(budget);
 
-//     fprintf(stderr, "VkBlobAllocator M %p +%lu %lu\n", ptr->buffer, ptr->offset, ptr->capacity);
+    //     NCNN_LOGE("VkBlobAllocator M %p +%lu %lu", ptr->buffer, ptr->offset, ptr->capacity);
 
     return ptr;
 }
 
 void VkBlobAllocator::fastFree(VkBufferMemory* ptr)
 {
-//     fprintf(stderr, "VkBlobAllocator F %p +%lu %lu\n", ptr->buffer, ptr->offset, ptr->capacity);
+    //     NCNN_LOGE("VkBlobAllocator F %p +%lu %lu", ptr->buffer, ptr->offset, ptr->capacity);
 
     const int buffer_block_count = buffer_blocks.size();
 
     int block_index = -1;
-    for (int i=0; i<buffer_block_count; i++)
+    for (int i = 0; i < buffer_block_count; i++)
     {
         if (buffer_blocks[i]->buffer == ptr->buffer && buffer_blocks[i]->memory == ptr->memory)
         {
@@ -656,7 +656,7 @@ void VkBlobAllocator::fastFree(VkBufferMemory* ptr)
 
     if (block_index == -1)
     {
-        fprintf(stderr, "FATAL ERROR! unlocked VkBlobAllocator get wild %p\n", ptr->buffer);
+        NCNN_LOGE("FATAL ERROR! unlocked VkBlobAllocator get wild %p", ptr->buffer);
 
         delete ptr;
 
@@ -664,10 +664,10 @@ void VkBlobAllocator::fastFree(VkBufferMemory* ptr)
     }
 
     // merge
-    std::list< std::pair<size_t, size_t> >::iterator it_merge_left = buffer_budgets[block_index].end();
-    std::list< std::pair<size_t, size_t> >::iterator it_merge_right = buffer_budgets[block_index].end();
-    std::list< std::pair<size_t, size_t> >::iterator it = buffer_budgets[block_index].begin();
-    for ( ; it != buffer_budgets[block_index].end(); it++)
+    std::list<std::pair<size_t, size_t> >::iterator it_merge_left = buffer_budgets[block_index].end();
+    std::list<std::pair<size_t, size_t> >::iterator it_merge_right = buffer_budgets[block_index].end();
+    std::list<std::pair<size_t, size_t> >::iterator it = buffer_budgets[block_index].begin();
+    for (; it != buffer_budgets[block_index].end(); it++)
     {
         if (it->first + it->second == ptr->offset)
         {
@@ -713,7 +713,7 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
 {
     if (elempack != 1 && elempack != 4 && elempack != 8)
     {
-        fprintf(stderr, "elempack must be 1 4 8\n");
+        NCNN_LOGE("elempack must be 1 4 8");
         return 0;
     }
 
@@ -752,7 +752,7 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
 
         if (width > (int)vkdev->info.max_image_dimension_1d)
         {
-            fprintf(stderr, "image dimension too large %d > %d\n", width, (int)vkdev->info.max_image_dimension_1d);
+            NCNN_LOGE("image dimension too large %d > %d", width, (int)vkdev->info.max_image_dimension_1d);
             return 0;
         }
     }
@@ -763,7 +763,7 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
 
         if (width > (int)vkdev->info.max_image_dimension_2d || height > (int)vkdev->info.max_image_dimension_2d)
         {
-            fprintf(stderr, "image dimension too large %d %d > %d\n", width, height, (int)vkdev->info.max_image_dimension_2d);
+            NCNN_LOGE("image dimension too large %d %d > %d", width, height, (int)vkdev->info.max_image_dimension_2d);
             return 0;
         }
     }
@@ -774,7 +774,7 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
 
         if (width > (int)vkdev->info.max_image_dimension_3d || height > (int)vkdev->info.max_image_dimension_3d || depth > (int)vkdev->info.max_image_dimension_3d)
         {
-            fprintf(stderr, "image dimension too large %d %d %d > %d\n", width, height, depth, (int)vkdev->info.max_image_dimension_3d);
+            NCNN_LOGE("image dimension too large %d %d %d > %d", width, height, depth, (int)vkdev->info.max_image_dimension_3d);
             return 0;
         }
     }
@@ -802,9 +802,9 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
     const int image_memory_block_count = image_memory_blocks.size();
 
     // find first spare space in image_memory_blocks
-    for (int i=0; i<image_memory_block_count; i++)
+    for (int i = 0; i < image_memory_block_count; i++)
     {
-        std::list< std::pair<size_t, size_t> >::iterator it = image_memory_budgets[i].begin();
+        std::list<std::pair<size_t, size_t> >::iterator it = image_memory_budgets[i].begin();
         while (it != image_memory_budgets[i].end())
         {
             // we cannot use it->first directly for base offset alignment
@@ -856,35 +856,35 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
                 it->second -= aligned_size;
             }
 
-//             fprintf(stderr, "VkBlobAllocator M %p +%lu %lu\n", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
+            //             NCNN_LOGE("VkBlobAllocator M %p +%lu %lu", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
 
             return ptr;
         }
     }
 
     // setup memory type and alignment
-    if (memory_type_index == (uint32_t)-1)
+    if (image_memory_type_index == (uint32_t)-1)
     {
         if (vkdev->info.type == 1)
         {
             // integrated gpu, prefer unified memory
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            image_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
         else
         {
             // discrete gpu, device local
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            image_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 
-        mappable = vkdev->is_mappable(memory_type_index);
-        coherent = vkdev->is_coherent(memory_type_index);
+        mappable = vkdev->is_mappable(image_memory_type_index);
+        coherent = vkdev->is_coherent(image_memory_type_index);
     }
 
     // create new block
     size_t new_block_size = std::max(block_size, aligned_size);
 
     // bind at memory offset
-    ptr->memory = allocate_memory(new_block_size);
+    ptr->memory = allocate_memory(new_block_size, image_memory_type_index);
     ptr->bind_offset = 0;
     ptr->bind_capacity = aligned_size;
 
@@ -904,26 +904,26 @@ VkImageMemory* VkBlobAllocator::fastMalloc(int dims, int w, int h, int c, size_t
     // adjust image_memory_budgets
     image_memory_blocks.push_back(ptr->memory);
 
-    std::list< std::pair<size_t, size_t> > budget;
+    std::list<std::pair<size_t, size_t> > budget;
     if (new_block_size > aligned_size)
     {
         budget.push_back(std::make_pair(aligned_size, new_block_size - aligned_size));
     }
     image_memory_budgets.push_back(budget);
 
-//     fprintf(stderr, "VkBlobAllocator M %p +%lu %lu\n", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
+    //     NCNN_LOGE("VkBlobAllocator M %p +%lu %lu", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
 
     return ptr;
 }
 
 void VkBlobAllocator::fastFree(VkImageMemory* ptr)
 {
-//     fprintf(stderr, "VkBlobAllocator F %p +%lu %lu\n", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
+    //     NCNN_LOGE("VkBlobAllocator F %p +%lu %lu", ptr->memory, ptr->bind_offset, ptr->bind_capacity);
 
     const int image_memory_block_count = image_memory_blocks.size();
 
     int block_index = -1;
-    for (int i=0; i<image_memory_block_count; i++)
+    for (int i = 0; i < image_memory_block_count; i++)
     {
         if (image_memory_blocks[i] == ptr->memory)
         {
@@ -934,7 +934,7 @@ void VkBlobAllocator::fastFree(VkImageMemory* ptr)
 
     if (block_index == -1)
     {
-        fprintf(stderr, "FATAL ERROR! unlocked VkBlobAllocator get wild %p\n", ptr->memory);
+        NCNN_LOGE("FATAL ERROR! unlocked VkBlobAllocator get wild %p", ptr->memory);
 
         if (!ptr->command_refcount)
         {
@@ -948,10 +948,10 @@ void VkBlobAllocator::fastFree(VkImageMemory* ptr)
     }
 
     // merge
-    std::list< std::pair<size_t, size_t> >::iterator it_merge_left = image_memory_budgets[block_index].end();
-    std::list< std::pair<size_t, size_t> >::iterator it_merge_right = image_memory_budgets[block_index].end();
-    std::list< std::pair<size_t, size_t> >::iterator it = image_memory_budgets[block_index].begin();
-    for ( ; it != image_memory_budgets[block_index].end(); it++)
+    std::list<std::pair<size_t, size_t> >::iterator it_merge_left = image_memory_budgets[block_index].end();
+    std::list<std::pair<size_t, size_t> >::iterator it_merge_right = image_memory_budgets[block_index].end();
+    std::list<std::pair<size_t, size_t> >::iterator it = image_memory_budgets[block_index].begin();
+    for (; it != image_memory_budgets[block_index].end(); it++)
     {
         if (it->first + it->second == ptr->bind_offset)
         {
@@ -999,7 +999,8 @@ void VkBlobAllocator::fastFree(VkImageMemory* ptr)
     }
 }
 
-VkWeightAllocator::VkWeightAllocator(const VulkanDevice* _vkdev) : VkAllocator(_vkdev)
+VkWeightAllocator::VkWeightAllocator(const VulkanDevice* _vkdev)
+    : VkAllocator(_vkdev)
 {
     buffer_offset_alignment = vkdev->info.buffer_offset_alignment;
     bind_memory_offset_alignment = vkdev->info.buffer_image_granularity;
@@ -1014,7 +1015,7 @@ VkWeightAllocator::VkWeightAllocator(const VulkanDevice* _vkdev) : VkAllocator(_
         buffer_offset_alignment = least_common_multiple(buffer_offset_alignment, vkdev->info.non_coherent_atom_size);
     }
 
-    block_size = alignSize(8 * 1024 * 1024, buffer_offset_alignment);// 8M
+    block_size = alignSize(8 * 1024 * 1024, buffer_offset_alignment); // 8M
 }
 
 VkWeightAllocator::~VkWeightAllocator()
@@ -1024,11 +1025,11 @@ VkWeightAllocator::~VkWeightAllocator()
 
 void VkWeightAllocator::clear()
 {
-//     fprintf(stderr, "VkWeightAllocator %lu %lu\n", buffer_blocks.size(), dedicated_buffer_blocks.size());
+    //     NCNN_LOGE("VkWeightAllocator %lu %lu", buffer_blocks.size(), dedicated_buffer_blocks.size());
 
     buffer_block_free_spaces.clear();
 
-    for (size_t i=0; i<buffer_blocks.size(); i++)
+    for (size_t i = 0; i < buffer_blocks.size(); i++)
     {
         VkBufferMemory* ptr = buffer_blocks[i];
 
@@ -1042,7 +1043,7 @@ void VkWeightAllocator::clear()
     }
     buffer_blocks.clear();
 
-    for (size_t i=0; i<dedicated_buffer_blocks.size(); i++)
+    for (size_t i = 0; i < dedicated_buffer_blocks.size(); i++)
     {
         VkBufferMemory* ptr = dedicated_buffer_blocks[i];
 
@@ -1058,7 +1059,7 @@ void VkWeightAllocator::clear()
 
     image_memory_block_free_spaces.clear();
 
-    for (size_t i=0; i<image_memory_blocks.size(); i++)
+    for (size_t i = 0; i < image_memory_blocks.size(); i++)
     {
         VkDeviceMemory memory = image_memory_blocks[i];
 
@@ -1066,7 +1067,7 @@ void VkWeightAllocator::clear()
     }
     image_memory_blocks.clear();
 
-    for (size_t i=0; i<dedicated_image_memory_blocks.size(); i++)
+    for (size_t i = 0; i < dedicated_image_memory_blocks.size(); i++)
     {
         VkDeviceMemory memory = dedicated_image_memory_blocks[i];
 
@@ -1077,14 +1078,14 @@ void VkWeightAllocator::clear()
 
 VkBufferMemory* VkWeightAllocator::fastMalloc(size_t size)
 {
-//     fprintf(stderr, "VkWeightAllocator fastMalloc %lu\n", size);
+    //     NCNN_LOGE("VkWeightAllocator fastMalloc %lu", size);
 
     size_t aligned_size = alignSize(size, buffer_offset_alignment);
 
     const int buffer_block_count = buffer_blocks.size();
 
     // find first spare space in buffer_blocks
-    for (int i=0; i<buffer_block_count; i++)
+    for (int i = 0; i < buffer_block_count; i++)
     {
         size_t free_size = buffer_block_free_spaces[i];
         if (free_size >= aligned_size)
@@ -1139,24 +1140,24 @@ VkBufferMemory* VkWeightAllocator::fastMalloc(size_t size)
         if (dedicatedAllocation)
         {
             // setup memory type and alignment
-            if (memory_type_index == (uint32_t)-1)
+            if (buffer_memory_type_index == (uint32_t)-1)
             {
                 if (vkdev->info.type == 1)
                 {
                     // integrated gpu, prefer unified memory
-                    memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                    buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
                 else
                 {
                     // discrete gpu, device local
-                    memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                    buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
                 }
 
-                mappable = vkdev->is_mappable(memory_type_index);
-                coherent = vkdev->is_coherent(memory_type_index);
+                mappable = vkdev->is_mappable(buffer_memory_type_index);
+                coherent = vkdev->is_coherent(buffer_memory_type_index);
             }
 
-            block->memory = allocate_dedicated_memory(memoryRequirements2.memoryRequirements.size, 0, block->buffer);
+            block->memory = allocate_dedicated_memory(memoryRequirements2.memoryRequirements.size, buffer_memory_type_index, 0, block->buffer);
 
             // ignore memoryRequirements2.memoryRequirements.alignment as we always bind at zero offset
             vkBindBufferMemory(vkdev->vkdevice(), block->buffer, block->memory, 0);
@@ -1188,29 +1189,29 @@ VkBufferMemory* VkWeightAllocator::fastMalloc(size_t size)
     vkGetBufferMemoryRequirements(vkdev->vkdevice(), block->buffer, &memoryRequirements);
 
     // setup memory type and alignment
-    if (memory_type_index == (uint32_t)-1)
+    if (buffer_memory_type_index == (uint32_t)-1)
     {
         if (vkdev->info.type == 1)
         {
             // integrated gpu, prefer unified memory
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
         else
         {
             // discrete gpu, device local
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 
-        mappable = vkdev->is_mappable(memory_type_index);
-        coherent = vkdev->is_coherent(memory_type_index);
+        mappable = vkdev->is_mappable(buffer_memory_type_index);
+        coherent = vkdev->is_coherent(buffer_memory_type_index);
     }
 
-    block->memory = allocate_memory(memoryRequirements.size);
+    block->memory = allocate_memory(memoryRequirements.size, buffer_memory_type_index);
 
     // ignore memoryRequirements.alignment as we always bind at zero offset
     vkBindBufferMemory(vkdev->vkdevice(), block->buffer, block->memory, 0);
 
-//     fprintf(stderr, "VkWeightAllocator M %p\n", block->buffer);
+    //     NCNN_LOGE("VkWeightAllocator M %p", block->buffer);
 
     block->mapped_ptr = 0;
     if (mappable)
@@ -1238,7 +1239,7 @@ VkBufferMemory* VkWeightAllocator::fastMalloc(size_t size)
 
 void VkWeightAllocator::fastFree(VkBufferMemory* ptr)
 {
-//     fprintf(stderr, "VkWeightAllocator F %p\n", ptr->buffer);
+    //     NCNN_LOGE("VkWeightAllocator F %p", ptr->buffer);
 
     delete ptr;
 }
@@ -1247,7 +1248,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
 {
     if (elempack != 1 && elempack != 4 && elempack != 8 && elempack != 16 && elempack != 32 && elempack != 64)
     {
-        fprintf(stderr, "elempack must be 1 4 8 16 32 64\n");
+        NCNN_LOGE("elempack must be 1 4 8 16 32 64");
         return 0;
     }
 
@@ -1295,7 +1296,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
 
         if (width > (int)vkdev->info.max_image_dimension_1d)
         {
-            fprintf(stderr, "image dimension too large %d > %d\n", width, (int)vkdev->info.max_image_dimension_1d);
+            NCNN_LOGE("image dimension too large %d > %d", width, (int)vkdev->info.max_image_dimension_1d);
             return 0;
         }
     }
@@ -1306,7 +1307,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
 
         if (width > (int)vkdev->info.max_image_dimension_2d || height > (int)vkdev->info.max_image_dimension_2d)
         {
-            fprintf(stderr, "image dimension too large %d %d > %d\n", width, height, (int)vkdev->info.max_image_dimension_2d);
+            NCNN_LOGE("image dimension too large %d %d > %d", width, height, (int)vkdev->info.max_image_dimension_2d);
             return 0;
         }
     }
@@ -1317,7 +1318,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
 
         if (width > (int)vkdev->info.max_image_dimension_3d || height > (int)vkdev->info.max_image_dimension_3d || depth > (int)vkdev->info.max_image_dimension_3d)
         {
-            fprintf(stderr, "image dimension too large %d %d %d > %d\n", width, height, depth, (int)vkdev->info.max_image_dimension_3d);
+            NCNN_LOGE("image dimension too large %d %d %d > %d", width, height, depth, (int)vkdev->info.max_image_dimension_3d);
             return 0;
         }
     }
@@ -1336,7 +1337,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
     if (vkdev->info.support_VK_KHR_get_memory_requirements2 && vkdev->info.support_VK_KHR_dedicated_allocation)
     {
         VkImageMemoryRequirementsInfo2KHR imageMemoryRequirementsInfo2;
-        imageMemoryRequirementsInfo2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
+        imageMemoryRequirementsInfo2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2_KHR;
         imageMemoryRequirementsInfo2.pNext = 0;
         imageMemoryRequirementsInfo2.image = ptr->image;
 
@@ -1356,25 +1357,25 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
         if (dedicatedAllocation)
         {
             // setup memory type and alignment
-            if (memory_type_index == (uint32_t)-1)
+            if (image_memory_type_index == (uint32_t)-1)
             {
                 if (vkdev->info.type == 1)
                 {
                     // integrated gpu, prefer unified memory
-                    memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+                    image_memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
                 }
                 else
                 {
                     // discrete gpu, device local
-                    memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                    image_memory_type_index = vkdev->find_memory_index(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
                 }
 
-                mappable = vkdev->is_mappable(memory_type_index);
-                coherent = vkdev->is_coherent(memory_type_index);
+                mappable = vkdev->is_mappable(image_memory_type_index);
+                coherent = vkdev->is_coherent(image_memory_type_index);
             }
 
             // bind memory
-            ptr->memory = allocate_dedicated_memory(memoryRequirements2.memoryRequirements.size, ptr->image, 0);
+            ptr->memory = allocate_dedicated_memory(memoryRequirements2.memoryRequirements.size, image_memory_type_index, ptr->image, 0);
             ptr->bind_offset = 0;
             ptr->bind_capacity = memoryRequirements2.memoryRequirements.size;
 
@@ -1408,7 +1409,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
     const int image_memory_block_count = image_memory_blocks.size();
 
     // find first spare space in buffer_blocks
-    for (int i=0; i<image_memory_block_count; i++)
+    for (int i = 0; i < image_memory_block_count; i++)
     {
         // we cannot use image_memory_block_free_spaces[i] directly for base offset alignment
         size_t bind_base_offset = block_size - image_memory_block_free_spaces[i];
@@ -1450,28 +1451,28 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
     }
 
     // setup memory type and alignment
-    if (memory_type_index == (uint32_t)-1)
+    if (image_memory_type_index == (uint32_t)-1)
     {
         if (vkdev->info.type == 1)
         {
             // integrated gpu, prefer unified memory
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
+            image_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0);
         }
         else
         {
             // discrete gpu, device local
-            memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+            image_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 
-        mappable = vkdev->is_mappable(memory_type_index);
-        coherent = vkdev->is_coherent(memory_type_index);
+        mappable = vkdev->is_mappable(image_memory_type_index);
+        coherent = vkdev->is_coherent(image_memory_type_index);
     }
 
     // create new block
     size_t new_block_size = std::max(block_size, aligned_size);
 
     // bind at memory offset
-    ptr->memory = allocate_memory(new_block_size);
+    ptr->memory = allocate_memory(new_block_size, image_memory_type_index);
     ptr->bind_offset = 0;
     ptr->bind_capacity = aligned_size;
 
@@ -1496,7 +1497,7 @@ VkImageMemory* VkWeightAllocator::fastMalloc(int dims, int w, int h, int c, size
 
 void VkWeightAllocator::fastFree(VkImageMemory* ptr)
 {
-//     fprintf(stderr, "VkWeightAllocator F %p\n", ptr->memory);
+    //     NCNN_LOGE("VkWeightAllocator F %p", ptr->memory);
 
     if (!ptr->command_refcount)
     {
@@ -1507,12 +1508,13 @@ void VkWeightAllocator::fastFree(VkImageMemory* ptr)
     }
 }
 
-VkStagingAllocator::VkStagingAllocator(const VulkanDevice* _vkdev) : VkAllocator(_vkdev)
+VkStagingAllocator::VkStagingAllocator(const VulkanDevice* _vkdev)
+    : VkAllocator(_vkdev)
 {
     mappable = true;
     coherent = true;
 
-    size_compare_ratio = 192;// 0.75f * 256
+    size_compare_ratio = 192; // 0.75f * 256
 }
 
 VkStagingAllocator::~VkStagingAllocator()
@@ -1524,7 +1526,7 @@ void VkStagingAllocator::set_size_compare_ratio(float scr)
 {
     if (scr < 0.f || scr > 1.f)
     {
-        fprintf(stderr, "invalid size compare ratio %f\n", scr);
+        NCNN_LOGE("invalid size compare ratio %f", scr);
         return;
     }
 
@@ -1533,13 +1535,13 @@ void VkStagingAllocator::set_size_compare_ratio(float scr)
 
 void VkStagingAllocator::clear()
 {
-//     fprintf(stderr, "VkStagingAllocator %lu\n", buffer_budgets.size());
+    //     NCNN_LOGE("VkStagingAllocator %lu", buffer_budgets.size());
 
     for (std::list<VkBufferMemory*>::iterator it = buffer_budgets.begin(); it != buffer_budgets.end(); it++)
     {
         VkBufferMemory* ptr = *it;
 
-//         fprintf(stderr, "VkStagingAllocator F %p\n", ptr->buffer);
+        //         NCNN_LOGE("VkStagingAllocator F %p", ptr->buffer);
 
         vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
         vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
@@ -1565,7 +1567,7 @@ VkBufferMemory* VkStagingAllocator::fastMalloc(size_t size)
         {
             buffer_budgets.erase(it);
 
-//             fprintf(stderr, "VkStagingAllocator M %p %lu reused %lu\n", ptr->buffer, size, capacity);
+            //             NCNN_LOGE("VkStagingAllocator M %p %lu reused %lu", ptr->buffer, size, capacity);
 
             return ptr;
         }
@@ -1580,12 +1582,12 @@ VkBufferMemory* VkStagingAllocator::fastMalloc(size_t size)
     vkGetBufferMemoryRequirements(vkdev->vkdevice(), ptr->buffer, &memoryRequirements);
 
     // setup memory type
-    if (memory_type_index == (uint32_t)-1)
+    if (buffer_memory_type_index == (uint32_t)-1)
     {
-        memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_CACHED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_CACHED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    ptr->memory = allocate_memory(memoryRequirements.size);
+    ptr->memory = allocate_memory(memoryRequirements.size, buffer_memory_type_index);
 
     // ignore memoryRequirements.alignment as we always bind at zero offset
     vkBindBufferMemory(vkdev->vkdevice(), ptr->buffer, ptr->memory, 0);
@@ -1597,14 +1599,14 @@ VkBufferMemory* VkStagingAllocator::fastMalloc(size_t size)
     ptr->access_flags = 0;
     ptr->stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-//     fprintf(stderr, "VkStagingAllocator M %p %lu\n", ptr->buffer, size);
+    //     NCNN_LOGE("VkStagingAllocator M %p %lu", ptr->buffer, size);
 
     return ptr;
 }
 
 void VkStagingAllocator::fastFree(VkBufferMemory* ptr)
 {
-//     fprintf(stderr, "VkStagingAllocator F %p\n", ptr->buffer);
+    //     NCNN_LOGE("VkStagingAllocator F %p", ptr->buffer);
 
     // return to buffer_budgets
     buffer_budgets.push_back(ptr);
@@ -1657,21 +1659,22 @@ VkImageMemory* VkStagingAllocator::fastMalloc(int dims, int w, int h, int c, siz
     ptr->stage_flags = VK_PIPELINE_STAGE_HOST_BIT;
     ptr->command_refcount = 0;
 
-//     fprintf(stderr, "VkStagingAllocator M %p %d %d %d %d %d\n", ptr->image, dims, width, height, depth, format);
+    //     NCNN_LOGE("VkStagingAllocator M %p %d %d %d %d %d", ptr->image, dims, width, height, depth, format);
 
     return ptr;
 }
 
 void VkStagingAllocator::fastFree(VkImageMemory* ptr)
 {
-//     fprintf(stderr, "VkStagingAllocator F %p\n", ptr->image);
+    //     NCNN_LOGE("VkStagingAllocator F %p", ptr->image);
 
     free(ptr->mapped_ptr);
 
     delete ptr;
 }
 
-VkWeightStagingAllocator::VkWeightStagingAllocator(const VulkanDevice* _vkdev) : VkAllocator(_vkdev)
+VkWeightStagingAllocator::VkWeightStagingAllocator(const VulkanDevice* _vkdev)
+    : VkAllocator(_vkdev)
 {
     mappable = true;
     coherent = true;
@@ -1692,12 +1695,12 @@ VkBufferMemory* VkWeightStagingAllocator::fastMalloc(size_t size)
     vkGetBufferMemoryRequirements(vkdev->vkdevice(), ptr->buffer, &memoryRequirements);
 
     // setup memory type
-    if (memory_type_index == (uint32_t)-1)
+    if (buffer_memory_type_index == (uint32_t)-1)
     {
-        memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_CACHED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        buffer_memory_type_index = vkdev->find_memory_index(memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_MEMORY_PROPERTY_HOST_CACHED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }
 
-    ptr->memory = allocate_memory(memoryRequirements.size);
+    ptr->memory = allocate_memory(memoryRequirements.size, buffer_memory_type_index);
 
     // ignore memoryRequirements.alignment as we always bind at zero offset
     vkBindBufferMemory(vkdev->vkdevice(), ptr->buffer, ptr->memory, 0);
@@ -1709,14 +1712,14 @@ VkBufferMemory* VkWeightStagingAllocator::fastMalloc(size_t size)
     ptr->access_flags = 0;
     ptr->stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-//     fprintf(stderr, "VkWeightStagingAllocator M %p %lu\n", ptr->buffer, size);
+    //     NCNN_LOGE("VkWeightStagingAllocator M %p %lu", ptr->buffer, size);
 
     return ptr;
 }
 
 void VkWeightStagingAllocator::fastFree(VkBufferMemory* ptr)
 {
-//     fprintf(stderr, "VkWeightStagingAllocator F %p\n", ptr->buffer);
+    //     NCNN_LOGE("VkWeightStagingAllocator F %p", ptr->buffer);
 
     vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
     vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
@@ -1726,7 +1729,8 @@ void VkWeightStagingAllocator::fastFree(VkBufferMemory* ptr)
 }
 
 #if __ANDROID_API__ >= 26
-VkAndroidHardwareBufferImageAllocator::VkAndroidHardwareBufferImageAllocator(const VulkanDevice* _vkdev, AHardwareBuffer* _hb) : VkAllocator(_vkdev), hb(_hb)
+VkAndroidHardwareBufferImageAllocator::VkAndroidHardwareBufferImageAllocator(const VulkanDevice* _vkdev, AHardwareBuffer* _hb)
+    : VkAllocator(_vkdev), hb(_hb)
 {
     samplerYcbcrConversion = 0;
 
@@ -1779,14 +1783,14 @@ VkImageMemory* VkAndroidHardwareBufferImageAllocator::fastMalloc(int /*dims*/, i
     ret = vkCreateImage(vkdev->vkdevice(), &imageCreateInfo, 0, &image);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateImage failed %d\n", ret);
+        NCNN_LOGE("vkCreateImage failed %d", ret);
         return 0;
     }
 
     // setup memory type
-    if (memory_type_index == (uint32_t)-1)
+    if (image_memory_type_index == (uint32_t)-1)
     {
-        memory_type_index = vkdev->find_memory_index(bufferProperties.memoryTypeBits, 0, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        image_memory_type_index = vkdev->find_memory_index(bufferProperties.memoryTypeBits, 0, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     }
 
     VkImportAndroidHardwareBufferInfoANDROID importAndroidHardwareBufferInfo;
@@ -1804,13 +1808,13 @@ VkImageMemory* VkAndroidHardwareBufferImageAllocator::fastMalloc(int /*dims*/, i
     memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memoryAllocateInfo.pNext = &memoryDedicatedAllocateInfo;
     memoryAllocateInfo.allocationSize = bufferProperties.allocationSize;
-    memoryAllocateInfo.memoryTypeIndex = memory_type_index;
+    memoryAllocateInfo.memoryTypeIndex = image_memory_type_index;
 
     VkDeviceMemory memory = 0;
     ret = vkAllocateMemory(vkdev->vkdevice(), &memoryAllocateInfo, 0, &memory);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkAllocateMemory failed %d\n", ret);
+        NCNN_LOGE("vkAllocateMemory failed %d", ret);
         return 0;
     }
 
@@ -1823,7 +1827,7 @@ VkImageMemory* VkAndroidHardwareBufferImageAllocator::fastMalloc(int /*dims*/, i
     ret = vkdev->vkBindImageMemory2KHR(vkdev->vkdevice(), 1, &bindImageMemoryInfo);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkBindImageMemory2KHR failed %d\n", ret);
+        NCNN_LOGE("vkBindImageMemory2KHR failed %d", ret);
         vkDestroyImage(vkdev->vkdevice(), image, 0);
         return 0;
     }
@@ -1854,7 +1858,7 @@ VkImageMemory* VkAndroidHardwareBufferImageAllocator::fastMalloc(int /*dims*/, i
     ret = vkCreateImageView(vkdev->vkdevice(), &imageViewCreateInfo, 0, &imageview);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateImageView failed %d\n", ret);
+        NCNN_LOGE("vkCreateImageView failed %d", ret);
         vkDestroyImage(vkdev->vkdevice(), image, 0);
         vkFreeMemory(vkdev->vkdevice(), memory, 0);
         return 0;
@@ -1896,7 +1900,7 @@ int VkAndroidHardwareBufferImageAllocator::init()
     ret = vkGetAndroidHardwareBufferPropertiesANDROID(vkdev->vkdevice(), hb, &bufferProperties);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkGetAndroidHardwareBufferPropertiesANDROID failed %d\n", ret);
+        NCNN_LOGE("vkGetAndroidHardwareBufferPropertiesANDROID failed %d", ret);
         return -1;
     }
 
@@ -1921,7 +1925,7 @@ int VkAndroidHardwareBufferImageAllocator::init()
     ret = vkdev->vkCreateSamplerYcbcrConversionKHR(vkdev->vkdevice(), &samplerYcbcrConversionCreateInfo, 0, &samplerYcbcrConversion);
     if (ret != VK_SUCCESS)
     {
-        fprintf(stderr, "vkCreateSamplerYcbcrConversionKHR failed %d\n", ret);
+        NCNN_LOGE("vkCreateSamplerYcbcrConversionKHR failed %d", ret);
         return -1;
     }
 

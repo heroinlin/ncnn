@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: cache-vulkansdk
       id: cache-vulkansdk
       uses: actions/cache@v1
@@ -19,6 +21,6 @@ jobs:
         rm -rf 1.1.114.0/source 1.1.114.0/samples
         find 1.1.114.0 -type f | grep -v -E 'vulkan|glslang' | xargs rm
     - name: configure
-      run: export PATH=`pwd`/1.1.114.0/x86_64/bin:$PATH && mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk-bundle/build/cmake/android.toolchain.cmake -DANDROID_ABI="x86" -DANDROID_PLATFORM=android-24 -DNCNN_VULKAN=ON ..
+      run: export PATH=`pwd`/1.1.114.0/x86_64/bin:$PATH && mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk-bundle/build/cmake/android.toolchain.cmake -DANDROID_ABI="x86" -DANDROID_PLATFORM=android-24 -DNCNN_VULKAN=ON -DNCNN_BUILD_TESTS=ON ..
     - name: build
       run: cmake --build build -j 2

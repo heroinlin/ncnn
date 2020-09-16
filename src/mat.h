@@ -15,15 +15,18 @@
 #ifndef NCNN_MAT_H
 #define NCNN_MAT_H
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #if __ARM_NEON
 #include <arm_neon.h>
 #endif
-#include "platform.h"
+#if __AVX__
+#include <immintrin.h>
+#endif
+
 #include "allocator.h"
 #include "option.h"
+#include "platform.h"
 
 #if NCNN_VULKAN
 #include <vulkan/vulkan.h>
@@ -31,8 +34,8 @@
 
 #if NCNN_PIXEL
 #if __ANDROID_API__ >= 9
-#include <jni.h>
 #include <android/bitmap.h>
+#include <jni.h>
 #endif // __ANDROID_API__ >= 9
 #endif // NCNN_PIXEL
 
@@ -84,8 +87,18 @@ public:
     void fill(int v);
 #if __ARM_NEON
     void fill(float32x4_t _v);
+    void fill(uint16x4_t _v);
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+    void fill(float16x4_t _v);
+    void fill(float16x8_t _v);
+#endif // __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
 #endif // __ARM_NEON
-    template <typename T> void fill(T v);
+#if __AVX__
+    void fill(__m256 _v);
+    void fill(__m128i _v);
+#endif // __AVX__
+    template<typename T>
+    void fill(T v);
     // deep copy
     Mat clone(Allocator* allocator = 0) const;
     // reshape vec
@@ -122,6 +135,9 @@ public:
     bool empty() const;
     size_t total() const;
 
+    // bits per element
+    int elembits() const;
+
     // shape only
     Mat shape() const;
 
@@ -130,8 +146,10 @@ public:
     const Mat channel(int c) const;
     float* row(int y);
     const float* row(int y) const;
-    template<typename T> T* row(int y);
-    template<typename T> const T* row(int y) const;
+    template<typename T>
+    T* row(int y);
+    template<typename T>
+    const T* row(int y) const;
 
     // range reference
     Mat channel_range(int c, int channels);
@@ -142,8 +160,10 @@ public:
     const Mat range(int x, int n) const;
 
     // access raw data
-    template<typename T> operator T*();
-    template<typename T> operator const T*() const;
+    template<typename T>
+    operator T*();
+    template<typename T>
+    operator const T*() const;
 
     // convenient access float vec element
     float& operator[](size_t i);
@@ -156,34 +176,34 @@ public:
         PIXEL_FORMAT_MASK = 0x0000ffff,
         PIXEL_CONVERT_MASK = 0xffff0000,
 
-        PIXEL_RGB       = 1,
-        PIXEL_BGR       = 2,
-        PIXEL_GRAY      = 3,
-        PIXEL_RGBA      = 4,
-        PIXEL_BGRA      = 5,
+        PIXEL_RGB = 1,
+        PIXEL_BGR = 2,
+        PIXEL_GRAY = 3,
+        PIXEL_RGBA = 4,
+        PIXEL_BGRA = 5,
 
-        PIXEL_RGB2BGR   = PIXEL_RGB | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
-        PIXEL_RGB2GRAY  = PIXEL_RGB | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
-        PIXEL_RGB2RGBA  = PIXEL_RGB | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
-        PIXEL_RGB2BGRA  = PIXEL_RGB | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGB2BGR = PIXEL_RGB | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGB2GRAY = PIXEL_RGB | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGB2RGBA = PIXEL_RGB | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGB2BGRA = PIXEL_RGB | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
 
-        PIXEL_BGR2RGB   = PIXEL_BGR | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
-        PIXEL_BGR2GRAY  = PIXEL_BGR | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
-        PIXEL_BGR2RGBA  = PIXEL_BGR | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
-        PIXEL_BGR2BGRA  = PIXEL_BGR | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGR2RGB = PIXEL_BGR | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGR2GRAY = PIXEL_BGR | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGR2RGBA = PIXEL_BGR | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGR2BGRA = PIXEL_BGR | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
 
-        PIXEL_GRAY2RGB  = PIXEL_GRAY | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
-        PIXEL_GRAY2BGR  = PIXEL_GRAY | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
+        PIXEL_GRAY2RGB = PIXEL_GRAY | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
+        PIXEL_GRAY2BGR = PIXEL_GRAY | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
         PIXEL_GRAY2RGBA = PIXEL_GRAY | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
         PIXEL_GRAY2BGRA = PIXEL_GRAY | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
 
-        PIXEL_RGBA2RGB  = PIXEL_RGBA | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
-        PIXEL_RGBA2BGR  = PIXEL_RGBA | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGBA2RGB = PIXEL_RGBA | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
+        PIXEL_RGBA2BGR = PIXEL_RGBA | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
         PIXEL_RGBA2GRAY = PIXEL_RGBA | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
         PIXEL_RGBA2BGRA = PIXEL_RGBA | (PIXEL_BGRA << PIXEL_CONVERT_SHIFT),
 
-        PIXEL_BGRA2RGB  = PIXEL_BGRA | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
-        PIXEL_BGRA2BGR  = PIXEL_BGRA | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGRA2RGB = PIXEL_BGRA | (PIXEL_RGB << PIXEL_CONVERT_SHIFT),
+        PIXEL_BGRA2BGR = PIXEL_BGRA | (PIXEL_BGR << PIXEL_CONVERT_SHIFT),
         PIXEL_BGRA2GRAY = PIXEL_BGRA | (PIXEL_GRAY << PIXEL_CONVERT_SHIFT),
         PIXEL_BGRA2RGBA = PIXEL_BGRA | (PIXEL_RGBA << PIXEL_CONVERT_SHIFT),
     };
@@ -195,6 +215,14 @@ public:
     static Mat from_pixels_resize(const unsigned char* pixels, int type, int w, int h, int target_width, int target_height, Allocator* allocator = 0);
     // convenient construct from pixel data and resize to specific size with stride(bytes-per-row) parameter
     static Mat from_pixels_resize(const unsigned char* pixels, int type, int w, int h, int stride, int target_width, int target_height, Allocator* allocator = 0);
+    // convenient construct from pixel data roi
+    static Mat from_pixels_roi(const unsigned char* pixels, int type, int w, int h, int roix, int roiy, int roiw, int roih, Allocator* allocator = 0);
+    // convenient construct from pixel data roi with stride(bytes-per-row) parameter
+    static Mat from_pixels_roi(const unsigned char* pixels, int type, int w, int h, int stride, int roix, int roiy, int roiw, int roih, Allocator* allocator = 0);
+    // convenient construct from pixel data roi and resize to specific size
+    static Mat from_pixels_roi_resize(const unsigned char* pixels, int type, int w, int h, int roix, int roiy, int roiw, int roih, int target_width, int target_height, Allocator* allocator = 0);
+    // convenient construct from pixel data roi and resize to specific size with stride(bytes-per-row) parameter
+    static Mat from_pixels_roi_resize(const unsigned char* pixels, int type, int w, int h, int stride, int roix, int roiy, int roiw, int roih, int target_width, int target_height, Allocator* allocator = 0);
 
     // convenient export to pixel data
     void to_pixels(unsigned char* pixels, int type) const;
@@ -210,6 +238,10 @@ public:
     static Mat from_android_bitmap(JNIEnv* env, jobject bitmap, int type_to, Allocator* allocator = 0);
     // convenient construct from android Bitmap and resize to specific size
     static Mat from_android_bitmap_resize(JNIEnv* env, jobject bitmap, int type_to, int target_width, int target_height, Allocator* allocator = 0);
+    // convenient construct from android Bitmap roi
+    static Mat from_android_bitmap_roi(JNIEnv* env, jobject bitmap, int type_to, int roix, int roiy, int roiw, int roih, Allocator* allocator = 0);
+    // convenient construct from android Bitmap roi and resize to specific size
+    static Mat from_android_bitmap_roi_resize(JNIEnv* env, jobject bitmap, int type_to, int roix, int roiy, int roiw, int roih, int target_width, int target_height, Allocator* allocator = 0);
     // convenient export to android Bitmap and resize to the android Bitmap size
     void to_android_bitmap(JNIEnv* env, jobject bitmap, int type_from) const;
 #endif // __ANDROID_API__ >= 9
@@ -323,6 +355,9 @@ public:
     bool empty() const;
     size_t total() const;
 
+    // bits per element
+    int elembits() const;
+
     // shape only
     Mat shape() const;
 
@@ -430,6 +465,9 @@ public:
     bool empty() const;
     size_t total() const;
 
+    // bits per element
+    int elembits() const;
+
     // shape only
     Mat shape() const;
 
@@ -474,14 +512,27 @@ public:
 };
 
 // type for vulkan specialization constant and push constant
-union vk_specialization_type { int i; float f; uint32_t u32; };
-union vk_constant_type { int i; float f; };
+union vk_specialization_type
+{
+    int i;
+    float f;
+    uint32_t u32;
+};
+union vk_constant_type
+{
+    int i;
+    float f;
+};
 #endif // NCNN_VULKAN
 
 // misc function
 #if NCNN_PIXEL
 // convert yuv420sp(nv21) to rgb, the fast approximate version
 void yuv420sp2rgb(const unsigned char* yuv420sp, int w, int h, unsigned char* rgb);
+// convert yuv420sp(nv12) to rgb, the fast approximate version
+void yuv420sp2rgb_nv12(const unsigned char* yuv420sp, int w, int h, unsigned char* rgb);
+// convert yuv420sp(nv21) to rgb with half resize, the faster approximate version
+void yuv420sp2rgb_half(const unsigned char* yuv420sp, int w, int h, unsigned char* rgb);
 // image pixel bilinear resize
 void resize_bilinear_c1(const unsigned char* src, int srcw, int srch, unsigned char* dst, int w, int h);
 void resize_bilinear_c2(const unsigned char* src, int srcw, int srch, unsigned char* dst, int w, int h);
@@ -492,7 +543,7 @@ void resize_bilinear_c1(const unsigned char* src, int srcw, int srch, int srcstr
 void resize_bilinear_c2(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride);
 void resize_bilinear_c3(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride);
 void resize_bilinear_c4(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride);
-// image pixel bilinear resize, convenient wrapper for yuv420sp(nv21)
+// image pixel bilinear resize, convenient wrapper for yuv420sp(nv21/nv12)
 void resize_bilinear_yuv420sp(const unsigned char* src, int srcw, int srch, unsigned char* dst, int w, int h);
 #endif // NCNN_PIXEL
 #if NCNN_PIXEL_ROTATE
@@ -517,7 +568,7 @@ void kanna_rotate_c1(const unsigned char* src, int srcw, int srch, int srcstride
 void kanna_rotate_c2(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride, int type);
 void kanna_rotate_c3(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride, int type);
 void kanna_rotate_c4(const unsigned char* src, int srcw, int srch, int srcstride, unsigned char* dst, int w, int h, int stride, int type);
-// image pixel kanna rotate, convenient wrapper for yuv420sp(nv21)
+// image pixel kanna rotate, convenient wrapper for yuv420sp(nv21/nv12)
 void kanna_rotate_yuv420sp(const unsigned char* src, int srcw, int srch, unsigned char* dst, int w, int h, int type);
 #endif // NCNN_PIXEL_ROTATE
 
@@ -530,7 +581,11 @@ float float16_to_float32(unsigned short value);
 inline unsigned short float32_to_bfloat16(float value)
 {
     // 16 : 16
-    union { unsigned int u; float f; } tmp;
+    union
+    {
+        unsigned int u;
+        float f;
+    } tmp;
     tmp.f = value;
     return tmp.u >> 16;
 }
@@ -538,10 +593,24 @@ inline unsigned short float32_to_bfloat16(float value)
 inline float bfloat16_to_float32(unsigned short value)
 {
     // 16 : 16
-    union { unsigned int u; float f; } tmp;
+    union
+    {
+        unsigned int u;
+        float f;
+    } tmp;
     tmp.u = value << 16;
     return tmp.f;
 }
+#if __ARM_NEON
+inline uint16x4_t vcvt_bf16_f32(float32x4_t _v)
+{
+    return vshrn_n_u32(vreinterpretq_u32_f32(_v), 16);
+}
+inline float32x4_t vcvt_f32_bf16(uint16x4_t _v)
+{
+    return vreinterpretq_f32_u32(vshll_n_u16(_v, 16));
+}
+#endif // __ARM_NEON
 
 // mat process
 enum BorderType
@@ -551,9 +620,11 @@ enum BorderType
 };
 void copy_make_border(const Mat& src, Mat& dst, int top, int bottom, int left, int right, int type, float v, const Option& opt = Option());
 void copy_cut_border(const Mat& src, Mat& dst, int top, int bottom, int left, int right, const Option& opt = Option());
+void resize_nearest(const Mat& src, Mat& dst, int w, int h, const Option& opt = Option());
 void resize_bilinear(const Mat& src, Mat& dst, int w, int h, const Option& opt = Option());
 void resize_bicubic(const Mat& src, Mat& dst, int w, int h, const Option& opt = Option());
 void convert_packing(const Mat& src, Mat& dst, int elempack, const Option& opt = Option());
+void flatten(const Mat& src, Mat& dst, const Option& opt = Option());
 void cast_float32_to_float16(const Mat& src, Mat& dst, const Option& opt = Option());
 void cast_float16_to_float32(const Mat& src, Mat& dst, const Option& opt = Option());
 void cast_int8_to_float32(const Mat& src, Mat& dst, const Option& opt = Option());
@@ -695,38 +766,36 @@ inline void Mat::fill(float _v)
 #if __aarch64__
     if (nn > 0)
     {
-    asm volatile (
-        "0:                             \n"
-        "subs       %w0, %w0, #1        \n"
-        "st1        {%4.4s}, [%1], #16  \n"
-        "bne        0b                  \n"
-        : "=r"(nn),     // %0
-          "=r"(ptr)     // %1
-        : "0"(nn),
-          "1"(ptr),
-          "w"(_c)       // %4
-        : "cc", "memory"
-    );
+        asm volatile(
+            "0:                             \n"
+            "subs       %w0, %w0, #1        \n"
+            "st1        {%4.4s}, [%1], #16  \n"
+            "bne        0b                  \n"
+            : "=r"(nn), // %0
+            "=r"(ptr) // %1
+            : "0"(nn),
+            "1"(ptr),
+            "w"(_c) // %4
+            : "cc", "memory");
     }
 #else
     if (nn > 0)
     {
-    asm volatile(
-        "0:                             \n"
-        "subs       %0, #1              \n"
-        "vst1.f32   {%e4-%f4}, [%1 :128]!\n"
-        "bne        0b                  \n"
-        : "=r"(nn),     // %0
-          "=r"(ptr)     // %1
-        : "0"(nn),
-          "1"(ptr),
-          "w"(_c)       // %4
-        : "cc", "memory"
-    );
+        asm volatile(
+            "0:                             \n"
+            "subs       %0, #1              \n"
+            "vst1.f32   {%e4-%f4}, [%1 :128]!\n"
+            "bne        0b                  \n"
+            : "=r"(nn), // %0
+            "=r"(ptr) // %1
+            : "0"(nn),
+            "1"(ptr),
+            "w"(_c) // %4
+            : "cc", "memory");
     }
 #endif // __aarch64__
 #endif // __ARM_NEON
-    for (; remain>0; remain--)
+    for (; remain > 0; remain--)
     {
         *ptr++ = _v;
     }
@@ -749,38 +818,36 @@ inline void Mat::fill(int _v)
 #if __aarch64__
     if (nn > 0)
     {
-    asm volatile (
-        "0:                             \n"
-        "subs       %w0, %w0, #1        \n"
-        "st1        {%4.4s}, [%1], #16  \n"
-        "bne        0b                  \n"
-        : "=r"(nn),     // %0
-          "=r"(ptr)     // %1
-        : "0"(nn),
-          "1"(ptr),
-          "w"(_c)       // %4
-        : "cc", "memory"
-    );
+        asm volatile(
+            "0:                             \n"
+            "subs       %w0, %w0, #1        \n"
+            "st1        {%4.4s}, [%1], #16  \n"
+            "bne        0b                  \n"
+            : "=r"(nn), // %0
+            "=r"(ptr) // %1
+            : "0"(nn),
+            "1"(ptr),
+            "w"(_c) // %4
+            : "cc", "memory");
     }
 #else
     if (nn > 0)
     {
-    asm volatile(
-        "0:                             \n"
-        "subs       %0, #1              \n"
-        "vst1.s32   {%e4-%f4}, [%1 :128]!\n"
-        "bne        0b                  \n"
-        : "=r"(nn),     // %0
-          "=r"(ptr)     // %1
-        : "0"(nn),
-          "1"(ptr),
-          "w"(_c)       // %4
-        : "cc", "memory"
-    );
+        asm volatile(
+            "0:                             \n"
+            "subs       %0, #1              \n"
+            "vst1.s32   {%e4-%f4}, [%1 :128]!\n"
+            "bne        0b                  \n"
+            : "=r"(nn), // %0
+            "=r"(ptr) // %1
+            : "0"(nn),
+            "1"(ptr),
+            "w"(_c) // %4
+            : "cc", "memory");
     }
 #endif // __aarch64__
 #endif // __ARM_NEON
-    for (; remain>0; remain--)
+    for (; remain > 0; remain--)
     {
         *ptr++ = _v;
     }
@@ -791,20 +858,75 @@ inline void Mat::fill(float32x4_t _v)
 {
     int size = total();
     float* ptr = (float*)data;
-    for (int i=0; i<size; i++)
+    for (int i = 0; i < size; i++)
     {
         vst1q_f32(ptr, _v);
         ptr += 4;
     }
 }
-#endif // __ARM_NEON
+inline void Mat::fill(uint16x4_t _v)
+{
+    int size = total();
+    unsigned short* ptr = (unsigned short*)data;
+    for (int i = 0; i < size; i++)
+    {
+        vst1_u16(ptr, _v);
+        ptr += 4;
+    }
+}
+#if __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+inline void Mat::fill(float16x4_t _v)
+{
+    int size = total();
+    __fp16* ptr = (__fp16*)data;
+    for (int i = 0; i < size; i++)
+    {
+        vst1_f16(ptr, _v);
+        ptr += 4;
+    }
+}
 
-template <typename T>
+inline void Mat::fill(float16x8_t _v)
+{
+    int size = total();
+    __fp16* ptr = (__fp16*)data;
+    for (int i = 0; i < size; i++)
+    {
+        vst1q_f16(ptr, _v);
+        ptr += 8;
+    }
+}
+#endif // __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#endif // __ARM_NEON
+#if __AVX__
+inline void Mat::fill(__m256 _v)
+{
+    int size = total();
+    float* ptr = (float*)data;
+    for (int i = 0; i < size; i++)
+    {
+        _mm256_storeu_ps(ptr, _v);
+        ptr += 8;
+    }
+}
+inline void Mat::fill(__m128i _v)
+{
+    int size = total();
+    unsigned short* ptr = (unsigned short*)data;
+    for (int i = 0; i < size; i++)
+    {
+        _mm_store_si128((__m128i*)ptr, _v);
+        ptr += 8;
+    }
+}
+#endif // __AVX__
+
+template<typename T>
 inline void Mat::fill(T _v)
 {
     int size = total();
     T* ptr = (T*)data;
-    for (int i=0; i<size; i++)
+    for (int i = 0; i < size; i++)
     {
         ptr[i] = _v;
     }
@@ -842,7 +964,7 @@ inline Mat Mat::reshape(int _w, Allocator* _allocator) const
         m.create(_w, elemsize, elempack, _allocator);
 
         // flatten
-        for (int i=0; i<c; i++)
+        for (int i = 0; i < c; i++)
         {
             const void* ptr = (unsigned char*)data + i * cstep * elemsize;
             void* mptr = (unsigned char*)m.data + i * w * h * elemsize;
@@ -875,7 +997,7 @@ inline Mat Mat::reshape(int _w, int _h, Allocator* _allocator) const
         m.create(_w, _h, elemsize, elempack, _allocator);
 
         // flatten
-        for (int i=0; i<c; i++)
+        for (int i = 0; i < c; i++)
         {
             const void* ptr = (unsigned char*)data + i * cstep * elemsize;
             void* mptr = (unsigned char*)m.data + i * w * h * elemsize;
@@ -910,7 +1032,7 @@ inline Mat Mat::reshape(int _w, int _h, int _c, Allocator* _allocator) const
             m.create(_w, _h, _c, elemsize, elempack, _allocator);
 
             // align channel
-            for (int i=0; i<_c; i++)
+            for (int i = 0; i < _c; i++)
             {
                 const void* ptr = (unsigned char*)data + i * _w * _h * elemsize;
                 void* mptr = (unsigned char*)m.data + i * m.cstep * m.elemsize;
@@ -1195,6 +1317,11 @@ inline size_t Mat::total() const
     return cstep * c;
 }
 
+inline int Mat::elembits() const
+{
+    return elempack ? elemsize * 8 / elempack : 0;
+}
+
 inline Mat Mat::shape() const
 {
     if (dims == 1)
@@ -1227,13 +1354,13 @@ inline const float* Mat::row(int y) const
     return (const float*)((unsigned char*)data + w * y * elemsize);
 }
 
-template <typename T>
+template<typename T>
 inline T* Mat::row(int y)
 {
     return (T*)((unsigned char*)data + w * y * elemsize);
 }
 
-template <typename T>
+template<typename T>
 inline const T* Mat::row(int y) const
 {
     return (const T*)((unsigned char*)data + w * y * elemsize);
@@ -1269,13 +1396,13 @@ inline const Mat Mat::range(int x, int n) const
     return Mat(n, (unsigned char*)data + x * elemsize, elemsize, elempack, allocator);
 }
 
-template <typename T>
+template<typename T>
 inline Mat::operator T*()
 {
     return (T*)data;
 }
 
-template <typename T>
+template<typename T>
 inline Mat::operator const T*() const
 {
     return (const T*)data;
@@ -1683,6 +1810,11 @@ inline size_t VkMat::total() const
     return cstep * c;
 }
 
+inline int VkMat::elembits() const
+{
+    return elempack ? elemsize * 8 / elempack : 0;
+}
+
 inline Mat VkMat::shape() const
 {
     if (dims == 1)
@@ -2074,6 +2206,11 @@ inline bool VkImageMat::empty() const
 inline size_t VkImageMat::total() const
 {
     return w * h * c;
+}
+
+inline int VkImageMat::elembits() const
+{
+    return elempack ? elemsize * 8 / elempack : 0;
 }
 
 inline Mat VkImageMat::shape() const
