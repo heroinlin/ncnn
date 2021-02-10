@@ -16,9 +16,10 @@
 #define TF_DIALECT_H
 
 #include <mlir/Dialect/Traits.h>
+#include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/Dialect.h>
-#include <mlir/IR/Function.h>
 #include <mlir/IR/OpImplementation.h>
+#include <mlir/Interfaces/ControlFlowInterfaces.h>
 #include <mlir/Interfaces/DerivedAttributeOpInterface.h>
 #include <mlir/Interfaces/InferTypeOpInterface.h>
 #include <mlir/Interfaces/LoopLikeInterface.h>
@@ -29,8 +30,6 @@
 namespace mlir {
 
 namespace TF {
-
-#include "tf_op_interfaces.h.inc"
 
 class TensorFlowDialect : public mlir::Dialect
 {
@@ -59,11 +58,11 @@ public:
     Operation* materializeConstant(OpBuilder& builder, Attribute value, Type type, Location loc) override;
 };
 
-#define GET_OP_CLASSES
-#include "tf_all_ops.h.inc"
-
 } // namespace TF
 
 } // namespace mlir
+
+#define GET_OP_CLASSES
+#include "tf_all_ops.h.inc"
 
 #endif // TF_DIALECT_H

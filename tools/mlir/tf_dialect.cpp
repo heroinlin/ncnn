@@ -19,15 +19,14 @@
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/Dialect.h>
 #include <mlir/IR/DialectImplementation.h>
-#include <mlir/IR/Function.h>
 #include <mlir/IR/Location.h>
+#include <mlir/IR/Matchers.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/IR/OpImplementation.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/PatternMatch.h>
-#include <mlir/IR/StandardTypes.h>
 #include <mlir/IR/TypeUtilities.h>
 #include <mlir/IR/Types.h>
 #include <mlir/IR/Value.h>
@@ -235,9 +234,6 @@ Operation* TensorFlowDialect::materializeConstant(OpBuilder& builder,
     return builder.create<ConstOp>(loc, type, value);
 }
 
-#define GET_OP_CLASSES
-#include "tf_all_ops.cc.inc"
-
 // Builds a constant op with the specified attribute `value`. The result
 // op's type is deduced from `value`; if `value` is of scalar type,
 // wraps it up with a tensor type of empty shape.
@@ -280,23 +276,6 @@ void ConstOp::build(OpBuilder& builder, OperationState& result, Type type,
     assert(type == result.types[0] && "type mismatch in construction");
 }
 
-LogicalResult ConstOp::inferReturnTypes(
-    MLIRContext* context, Optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
-    SmallVectorImpl<Type>& inferredReturnTypes)
-{
-    auto value = attributes.get("value");
-    if (!value) return emitOptionalError(location, "missing attribute 'value'");
-    if (auto elem_attr = value.dyn_cast<ElementsAttr>())
-    {
-        inferredReturnTypes.assign({elem_attr.getType()});
-        return success();
-    }
-    return emitOptionalError(location,
-                             "attribute 'value' failed to satisfy constraint: "
-                             "constant vector/tensor");
-}
-
 Region& WhileRegionOp::getLoopBody()
 {
     return body();
@@ -324,3 +303,6 @@ LogicalResult WhileRegionOp::moveOutOfLoop(
 } // namespace TF
 
 } // namespace mlir
+
+#define GET_OP_CLASSES
+#include "tf_all_ops.cc.inc"

@@ -15,8 +15,8 @@
 #ifndef NCNN_DIALECT_H
 #define NCNN_DIALECT_H
 
+#include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/Dialect.h>
-#include <mlir/IR/Function.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 
 namespace mlir {
@@ -34,10 +34,10 @@ public:
     }
 };
 
+} // namespace ncnn
+
 #define GET_OP_CLASSES
 #include "ncnn_ops.h.inc"
-
-} // namespace ncnn
 
 } // namespace mlir
 
