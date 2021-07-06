@@ -776,7 +776,7 @@ PYBIND11_MODULE(ncnn, m)
     "extract", [](Extractor& ex, const char* blob_name, int type) {
         ncnn::Mat feat;
         int ret = ex.extract(blob_name, feat, type);
-        return py::make_tuple(ret, feat);
+        return py::make_tuple(ret, feat.clone());
     },
     py::arg("blob_name"), py::arg("type") = 0)
 #endif
@@ -786,7 +786,7 @@ PYBIND11_MODULE(ncnn, m)
     "extract", [](Extractor& ex, int blob_index, int type) {
         ncnn::Mat feat;
         int ret = ex.extract(blob_index, feat, type);
-        return py::make_tuple(ret, feat);
+        return py::make_tuple(ret, feat.clone());
     },
     py::arg("blob_index"), py::arg("type") = 0);
 
@@ -803,7 +803,6 @@ PYBIND11_MODULE(ncnn, m)
     .def_readwrite("support_bf16_storage", &Layer::support_bf16_storage)
     .def_readwrite("support_fp16_storage", &Layer::support_fp16_storage)
     .def_readwrite("support_image_storage", &Layer::support_image_storage)
-    .def_readwrite("use_int8_inference", &Layer::use_int8_inference)
     .def_readwrite("support_weight_fp16_storage", &Layer::support_weight_fp16_storage)
     .def("forward", (int (Layer::*)(const std::vector<Mat>&, std::vector<Mat>&, const Option&) const) & Layer::forward,
          py::arg("bottom_blobs"), py::arg("top_blobs"), py::arg("opt"))
@@ -884,7 +883,15 @@ PYBIND11_MODULE(ncnn, m)
 #endif // NCNN_STDIO
 
     .def("clear", &Net::clear)
-    .def("create_extractor", &Net::create_extractor)
+    .def("create_extractor", &Net::create_extractor, py::keep_alive<0, 1>()) //net should be kept alive until retuned ex is freed by gc
+
+    .def("input_indexes", &Net::input_indexes, py::return_value_policy::reference)
+    .def("input_indexes", &Net::output_indexes, py::return_value_policy::reference)
+#if NCNN_STRING
+    .def("input_names", &Net::input_names, py::return_value_policy::reference)
+    .def("output_names", &Net::output_names, py::return_value_policy::reference)
+#endif // NCNN_STRING
+
     .def("blobs", &Net::blobs, py::return_value_policy::reference_internal)
     .def("layers", &Net::layers, py::return_value_policy::reference_internal);
 
@@ -1077,19 +1084,19 @@ PYBIND11_MODULE(ncnn, m)
     py::arg("src"),
     py::arg("opt") = Option());
 
-    m.def("quantize_float32_to_int8", &quantize_float32_to_int8,
+    m.def("quantize_to_int8", &quantize_to_int8,
           py::arg("src"), py::arg("dst"),
-          py::arg("scale"),
+          py::arg("scale_data"),
           py::arg("opt") = Option());
     m.def(
-        "quantize_float32_to_int8",
-    [](const Mat& src, float scale, const Option& opt) {
+        "quantize_to_int8",
+    [](const Mat& src, const Mat& scale_data, const Option& opt) {
         Mat dst;
-        quantize_float32_to_int8(src, dst, scale, opt);
+        quantize_to_int8(src, dst, scale_data, opt);
         return dst;
     },
     py::arg("src"),
-    py::arg("scale"),
+    py::arg("scale_data"),
     py::arg("opt") = Option());
 
 #if NCNN_STRING
@@ -1113,8 +1120,8 @@ PYBIND11_MODULE(ncnn, m)
     m.def("destroy_gpu_instance", &destroy_gpu_instance);
     m.def("get_gpu_count", &get_gpu_count);
     m.def("get_default_gpu_index", &get_default_gpu_index);
-    m.def("get_gpu_info", &get_gpu_info, py::arg("device_index") = 0, py::return_value_policy::reference_internal);
-    m.def("get_gpu_device", &get_gpu_device, py::arg("device_index") = 0, py::return_value_policy::reference_internal);
+    m.def("get_gpu_info", &get_gpu_info, py::arg("device_index") = 0, py::return_value_policy::reference);
+    m.def("get_gpu_device", &get_gpu_device, py::arg("device_index") = 0, py::return_value_policy::reference);
 
     py::class_<VkBufferMemory>(m, "VkBufferMemory")
     .def_readwrite("offset", &VkBufferMemory::offset)

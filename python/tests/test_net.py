@@ -26,6 +26,10 @@ def test_net():
         net.load_model(dr)
         assert ret == 0 and len(net.blobs()) == 3 and len(net.layers()) == 3
 
+        input_names = net.input_names()
+        output_names = net.output_names()
+        assert len(input_names) > 0 and len(output_names) > 0
+
         in_mat = ncnn.Mat((227, 227, 3))
 
         with net.create_extractor() as ex:
@@ -58,12 +62,10 @@ def test_net_vulkan():
 
     assert ret == 0 and out_mat.dims == 1 and out_mat.w == 1
 
+    ex.clear()
+
     net.clear()
     assert len(net.blobs()) == 0 and len(net.layers()) == 0
-
-    # ensure ex release before net when use vulkan
-    ex = None
-    net = None
 
 
 def test_custom_layer():
