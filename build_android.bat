@@ -1,6 +1,6 @@
 @echo off
 %%修改ndk所在目录，15以上版本
-set ANDROID_NDK=D:\Program_Files\Android\Sdk\ndk-bundle
+set ANDROID_NDK=D:\envs\android-ndk-r21e-windows-x86_64\android-ndk-r21e
 
 mkdir build_android
 cd build_android
