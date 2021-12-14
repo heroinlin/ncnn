@@ -349,6 +349,12 @@ jobs:
       run: |
         sudo cp openmp-macos/include/* $DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
         sudo cp openmp-macos/lib/libomp.a $DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "vulkansdk-macos-1.2.162.0"
+        key: vulkansdk-macos-1.2.162.0
     - name: vulkansdk
       run: |
         wget https://sdk.lunarg.com/sdk/download/1.2.189.0/mac/vulkansdk-macos-1.2.189.0.dmg?Human=true -O vulkansdk-macos-1.2.189.0.dmg
@@ -576,6 +582,12 @@ jobs:
         sudo cp openmp-ios/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib
         sudo cp openmp-ios/include/* $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/include
         sudo cp openmp-ios/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/lib
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "vulkansdk-macos-1.2.135.0"
+        key: vulkansdk-macos-1.2.135.0
     - name: vulkansdk
       run: |
         wget https://sdk.lunarg.com/sdk/download/1.2.189.0/mac/vulkansdk-macos-1.2.189.0.dmg?Human=true -O vulkansdk-macos-1.2.189.0.dmg
@@ -804,6 +816,12 @@ jobs:
         sudo cp openmp-ios-bitcode/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/lib
         sudo cp openmp-ios-bitcode/include/* $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/include
         sudo cp openmp-ios-bitcode/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/lib
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "vulkansdk-macos-1.2.135.0"
+        key: vulkansdk-macos-1.2.135.0
     - name: vulkansdk
       run: |
         wget https://sdk.lunarg.com/sdk/download/1.2.189.0/mac/vulkansdk-macos-1.2.189.0.dmg?Human=true -O vulkansdk-macos-1.2.189.0.dmg
@@ -1261,6 +1279,12 @@ jobs:
         cmake -T v140,host=x64 -A x64 -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe
@@ -1344,6 +1368,12 @@ jobs:
         cmake -T v140,host=x64 -A x64 -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe
@@ -1427,6 +1457,12 @@ jobs:
         cmake -T v141,host=x64 -A x64 -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe
@@ -1510,6 +1546,12 @@ jobs:
         cmake -T v141,host=x64 -A x64 -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe
@@ -1593,6 +1635,12 @@ jobs:
         cmake -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe
@@ -1676,6 +1724,12 @@ jobs:
         cmake -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install\x64" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe

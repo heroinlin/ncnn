@@ -35,6 +35,10 @@ jobs:
   windows-vs2017-gpu:
     runs-on: windows-2016
     steps:
+    - name: cancel-previous-runs
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
       with:
         submodules: true
@@ -53,6 +57,12 @@ jobs:
         mkdir build-vs2017; cd build-vs2017; cmake -T v141,host=x64 -A x64 -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE\protobuf-install" -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DNCNN_BUILD_TESTS=ON ../cmake
         cmake --build . --config Release -j 2
         cmake --build . --config Release --target install
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "VulkanSDK"
+        key: VulkanSDK-1.1.114.0-Installer
     - name: vulkansdk
       run: |
         Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.189.0/windows/VulkanSDK-1.2.189.0-Installer.exe?Human=true -OutFile VulkanSDK.exe

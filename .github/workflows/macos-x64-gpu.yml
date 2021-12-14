@@ -37,6 +37,10 @@ jobs:
   macos-clang-gpu:
     runs-on: macos-latest
     steps:
+    - name: cancel-previous-runs
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
       with:
         submodules: true
@@ -67,6 +71,12 @@ jobs:
       run: |
         sudo cp $GITHUB_WORKSPACE/openmp-install/include/* $DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
         sudo cp $GITHUB_WORKSPACE/openmp-install/lib/libomp.a $DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib
+    - name: cache-vulkansdk
+      id: cache-vulkansdk
+      uses: actions/cache@v2.1.7
+      with:
+        path: "vulkansdk-macos-1.2.162.0"
+        key: vulkansdk-macos-1.2.162.0
     - name: vulkansdk
       run: |
         wget https://sdk.lunarg.com/sdk/download/1.2.189.0/mac/vulkansdk-macos-1.2.189.0.dmg?Human=true -O vulkansdk-macos-1.2.189.0.dmg

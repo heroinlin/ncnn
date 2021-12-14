@@ -35,6 +35,10 @@ jobs:
   linux-gcc:
     runs-on: ubuntu-18.04
     steps:
+    - name: cancel-previous-runs
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
     - name: update
       run: sudo apt-get update
@@ -84,6 +88,10 @@ jobs:
   linux-gcc-cpp03-nostdio-nostring-simplestl:
     runs-on: ubuntu-18.04
     steps:
+    - name: cancel-previous-runs
+      uses: styfle/cancel-workflow-action@0.9.1
+      with:
+        access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
     - name: build-nostdio
       run: |
