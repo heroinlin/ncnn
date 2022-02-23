@@ -13,6 +13,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+#include "platform.h"
+
+#if NCNN_C_API
+
 #include "c_api.h"
 
 #include <stdlib.h>
@@ -180,6 +184,11 @@ void ncnn_option_set_use_vulkan_compute(ncnn_option_t opt, int use_vulkan_comput
 }
 
 /* mat api */
+ncnn_mat_t ncnn_mat_create()
+{
+    return (ncnn_mat_t)(new Mat());
+}
+
 ncnn_mat_t ncnn_mat_create_1d(int w, ncnn_allocator_t allocator)
 {
     return (ncnn_mat_t)(new Mat(w, (size_t)4u, (Allocator*)allocator));
@@ -822,12 +831,12 @@ public:
         {
             bottom_blobs0[i] = (ncnn_mat_t)&bottom_blobs[i];
         }
-        std::vector<ncnn_mat_t*> top_blobs0(n2, (ncnn_mat_t*)0);
+        std::vector<ncnn_mat_t> top_blobs0(n2, (ncnn_mat_t)0);
         int ret = layer->forward_n(layer, bottom_blobs0.data(), n, top_blobs0.data(), n2, (ncnn_option_t)&opt);
         for (int i = 0; i < n2; i++)
         {
-            top_blobs[i] = *(Mat*)*top_blobs0[i];
-            ncnn_mat_destroy(*top_blobs0[i]);
+            top_blobs[i] = *(Mat*)top_blobs0[i];
+            ncnn_mat_destroy(top_blobs0[i]);
         }
         return ret;
     }
@@ -889,7 +898,7 @@ static int __ncnn_Layer_forward_1(const ncnn_layer_t layer, const ncnn_mat_t bot
     return ret;
 }
 
-static int __ncnn_Layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bottom_blobs, int n, ncnn_mat_t** top_blobs, int n2, const ncnn_option_t opt)
+static int __ncnn_Layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bottom_blobs, int n, ncnn_mat_t* top_blobs, int n2, const ncnn_option_t opt)
 {
     std::vector<Mat> _bottom_blobs(n);
     std::vector<Mat> _top_blobs(n2);
@@ -900,7 +909,7 @@ static int __ncnn_Layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bo
     int ret = ((const Layer*)layer->pthis)->Layer::forward(_bottom_blobs, _top_blobs, *(const Option*)opt);
     for (int i = 0; i < n2; i++)
     {
-        *top_blobs[i] = (ncnn_mat_t)(new Mat(_top_blobs[i]));
+        top_blobs[i] = (ncnn_mat_t)(new Mat(_top_blobs[i]));
     }
     return ret;
 }
@@ -948,7 +957,7 @@ static int __ncnn_layer_forward_1(const ncnn_layer_t layer, const ncnn_mat_t bot
     return ret;
 }
 
-static int __ncnn_layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bottom_blobs, int n, ncnn_mat_t** top_blobs, int n2, const ncnn_option_t opt)
+static int __ncnn_layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bottom_blobs, int n, ncnn_mat_t* top_blobs, int n2, const ncnn_option_t opt)
 {
     std::vector<Mat> _bottom_blobs(n);
     std::vector<Mat> _top_blobs(n2);
@@ -959,7 +968,7 @@ static int __ncnn_layer_forward_n(const ncnn_layer_t layer, const ncnn_mat_t* bo
     int ret = ((const Layer*)layer->pthis)->forward(_bottom_blobs, _top_blobs, *(const Option*)opt);
     for (int i = 0; i < n2; i++)
     {
-        *top_blobs[i] = (ncnn_mat_t)(new Mat(_top_blobs[i]));
+        top_blobs[i] = (ncnn_mat_t)(new Mat(_top_blobs[i]));
     }
     return ret;
 }
@@ -1351,3 +1360,5 @@ int ncnn_extractor_extract_index(ncnn_extractor_t ex, int index, ncnn_mat_t* mat
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+#endif /* NCNN_C_API */
