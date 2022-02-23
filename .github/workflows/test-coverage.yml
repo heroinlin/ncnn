@@ -52,14 +52,14 @@ jobs:
       uses: actions/cache@v2.1.7
       with:
         path: swiftshader-install
-        key: swiftshader-linux-install-20211002
+        key: swiftshader-linux-install-20220211
     - name: checkout-swiftshader
       if: steps.cache-swiftshader.outputs.cache-hit != 'true'
       uses: actions/checkout@v2
       with:
         repository: google/swiftshader
         path: swiftshader
-        ref: f43b9df4c8a9959047e2e1d7e111554ab3f9a3bf
+        ref: 0863290dc7f6cc1649bab1858790e812b8aef02a
     - name: checkout-swiftshader-submodules
       if: steps.cache-swiftshader.outputs.cache-hit != 'true'
       run: |
@@ -75,7 +75,7 @@ jobs:
         mkdir $GITHUB_WORKSPACE/swiftshader-install
         cp Linux/* $GITHUB_WORKSPACE/swiftshader-install
     - name: configure
-      run: export VULKAN_SDK=`pwd`/1.2.189.0/x86_64 && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_OPENMP=OFF -DNCNN_VULKAN=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+      run: export VULKAN_SDK=`pwd`/1.2.189.0/x86_64 && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_OPENMP=OFF -DNCNN_VULKAN=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
     - name: build
       run: cmake --build build -j 2
     - name: test
@@ -143,7 +143,7 @@ jobs:
         ninja install
 
     - name: configure
-      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_OPENMP=OFF -DNCNN_VULKAN=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_OPENMP=OFF -DNCNN_VULKAN=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
     - name: build
       run: cmake --build build -j 2
     - name: test
@@ -177,7 +177,7 @@ jobs:
     - name: build-sse2
       run: |
         mkdir build-sse2 && cd build-sse2
-        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX=OFF -DNCNN_AVX2=OFF -DNCNN_OPENMP=OFF -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX=OFF -DNCNN_AVX2=OFF -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_OPENMP=OFF -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
         cmake --build . -j 2
     - name: test-sse2
       run: cd build-sse2 && ctest --output-on-failure -j 2
@@ -194,11 +194,22 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: build-sse2/lcov.info
 
-  linux-gcc-avx-omp:
-    runs-on: ubuntu-latest
-    steps:
-    - name: cancel-previous-runs
-      uses: styfle/cancel-workflow-action@0.9.1
+    - name: build-avx
+      run: |
+        mkdir build-avx && cd build-avx
+        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=OFF -DNCNN_AVX=ON -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_OPENMP=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+        cmake --build . -j 2
+    - name: test-avx
+      run: cd build-avx && ctest --output-on-failure -j 2
+    - name: lcov-collect
+      run: |
+        cd build-avx
+        lcov -d ./src -c -o lcov.info
+        lcov -r lcov.info '/usr/*' -o lcov.info
+        lcov -r lcov.info '*/build-avx/*' -o lcov.info
+        lcov --list lcov.info
+    - name: codecov-avx
+      uses: codecov/codecov-action@v2.1.0
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: build-avx/lcov.info
@@ -206,7 +217,7 @@ jobs:
     - name: build-avx2
       run: |
         mkdir build-avx2 && cd build-avx2
-        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_OPENMP=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_OPENMP=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
         cmake --build . -j 2
     - name: test-avx2
       run: cd build-avx2 && ctest --output-on-failure -j 2
@@ -222,6 +233,37 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: build-avx2/lcov.info
+
+  linux-gcc-x64-avx512:
+    runs-on: [self-hosted, linux]
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      env:
+        CC: gcc
+        CXX: g++
+        LD_LIBRARY_PATH: /data/action/install/lib64
+      run: |
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_AVX2=ON -DNCNN_AVX512=OFF -DNCNN_XOP=OFF -DNCNN_AVXVNNI=OFF -DNCNN_AVX512=ON -DNCNN_AVX512VNNI=ON -DNCNN_OPENMP=OFF -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
+        cmake --build . -j 4
+    - name: test
+      env:
+        LD_LIBRARY_PATH: /data/action/install/lib64
+      run: cd build && ctest --output-on-failure -j 4
+    - name: lcov-collect
+      run: |
+        cd build
+        lcov -d ./src -c -o lcov.info
+        lcov -r lcov.info '/usr/*' -o lcov.info
+        lcov -r lcov.info '*/install/*' -o lcov.info
+        lcov -r lcov.info '*/build/*' -o lcov.info
+        lcov --list lcov.info
+    - name: codecov
+      uses: codecov/codecov-action@v2.1.0
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: build/lcov.info
 
   linux-gcc-arm:
     runs-on: ubuntu-20.04
@@ -411,10 +453,6 @@ jobs:
   linux-gcc-arm82-omp:
     runs-on: ubuntu-20.04
     steps:
-    - name: cancel-previous-runs
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
 
     - name: lcov
@@ -434,6 +472,19 @@ jobs:
         ref: 8746309137ba470d1b2e8f5ce86ac228625db940
     - name: qemu
       if: steps.cache-qemu.outputs.cache-hit != 'true'
+      run: |
+        cd qemu
+        ./configure --prefix=install --target-list=aarch64-linux-user --disable-system
+        make -j2
+        make install
+        cp -r aarch64-linux-user/install $GITHUB_WORKSPACE/qemu-install
+
+    - name: aarch64-gnu-toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install g++-aarch64-linux-gnu
+
+    - name: build-arm82-omp
       run: |
         mkdir build-arm82-omp && cd build-arm82-omp
         cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake -DCMAKE_BUILD_TYPE=debug -DNCNN_COVERAGE=ON -DNCNN_RUNTIME_CPU=OFF -DNCNN_ARM82=ON -DNCNN_OPENMP=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF -DNCNN_BUILD_TESTS=ON ..
@@ -455,6 +506,40 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: build-arm82-omp/lcov.info
+
+  linux-gcc-arm82dot-omp:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: lcov
+      run: sudo apt-get install lcov
+    - name: cache-qemu
+      id: cache-qemu
+      uses: actions/cache@v2.1.7
+      with:
+        path: qemu-install
+        key: qemu-aarch64-install-1
+    - name: checkout-qemu
+      if: steps.cache-qemu.outputs.cache-hit != 'true'
+      uses: actions/checkout@v2
+      with:
+        repository: qemu/qemu
+        path: qemu
+        ref: 8746309137ba470d1b2e8f5ce86ac228625db940
+    - name: qemu
+      if: steps.cache-qemu.outputs.cache-hit != 'true'
+      run: |
+        cd qemu
+        ./configure --prefix=install --target-list=aarch64-linux-user --disable-system
+        make -j2
+        make install
+        cp -r aarch64-linux-user/install $GITHUB_WORKSPACE/qemu-install
+
+    - name: aarch64-gnu-toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install g++-aarch64-linux-gnu
 
     - name: build-arm82dot-omp
       run: |

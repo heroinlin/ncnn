@@ -39,10 +39,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: true
-    - name: update
-      run: sudo apt-get update
-    - name: protobuf
-      run: sudo apt-get install libprotobuf-dev protobuf-compiler libopencv-dev
     - name: cache-vulkansdk
       id: cache-vulkansdk
       uses: actions/cache@v2.1.7
@@ -61,14 +57,14 @@ jobs:
       uses: actions/cache@v2.1.7
       with:
         path: swiftshader-install
-        key: swiftshader-linux-install-20211002
+        key: swiftshader-linux-install-20220211
     - name: checkout-swiftshader
       if: steps.cache-swiftshader.outputs.cache-hit != 'true'
       uses: actions/checkout@v2
       with:
         repository: google/swiftshader
         path: swiftshader
-        ref: f43b9df4c8a9959047e2e1d7e111554ab3f9a3bf
+        ref: 0863290dc7f6cc1649bab1858790e812b8aef02a
     - name: checkout-swiftshader-submodules
       if: steps.cache-swiftshader.outputs.cache-hit != 'true'
       run: |
@@ -98,7 +94,7 @@ jobs:
       run: |
         export VULKAN_SDK=`pwd`/1.2.189.0/x86_64
         mkdir build && cd build
-        cmake -DNCNN_VULKAN=ON -DNCNN_PYTHON=ON ..
+        cmake -DNCNN_VULKAN=ON -DNCNN_PYTHON=ON -DNCNN_BUILD_TOOLS=OFF -DNCNN_BUILD_EXAMPLES=OFF ..
         cmake --build . -j 2
     - name: install python
       run: cd python && pip install .
