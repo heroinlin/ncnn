@@ -216,7 +216,7 @@ jobs:
     steps:
     - name: cache-openmp
       id: cache-openmp
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: openmp-install
         key: openmp-macos-release-11.0.0
@@ -351,7 +351,7 @@ jobs:
         sudo cp openmp-macos/lib/libomp.a $DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "vulkansdk-macos-1.2.162.0"
         key: vulkansdk-macos-1.2.162.0
@@ -439,7 +439,7 @@ jobs:
     steps:
     - name: cache-openmp
       id: cache-openmp
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: openmp-install
         key: openmp-ios-release-11.0.0
@@ -584,7 +584,7 @@ jobs:
         sudo cp openmp-ios/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/lib
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "vulkansdk-macos-1.2.135.0"
         key: vulkansdk-macos-1.2.135.0
@@ -673,7 +673,7 @@ jobs:
     steps:
     - name: cache-openmp
       id: cache-openmp
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: openmp-install
         key: openmp-ios-bitcode-release-11.0.0
@@ -818,7 +818,7 @@ jobs:
         sudo cp openmp-ios-bitcode/lib/libomp.a $DEVELOPER_DIR/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/lib
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "vulkansdk-macos-1.2.135.0"
         key: vulkansdk-macos-1.2.135.0
@@ -1035,7 +1035,7 @@ jobs:
         submodules: true
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "1.2.189.0"
         key: vulkansdk-linux-x86_64-1.2.189.0
@@ -1115,7 +1115,7 @@ jobs:
         submodules: true
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "1.2.189.0"
         key: vulkansdk-linux-x86_64-1.2.189.0
@@ -1260,7 +1260,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2015-x86-x64-install
@@ -1281,7 +1281,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
@@ -1349,7 +1349,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2015-x86-x64-install
@@ -1370,7 +1370,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
@@ -1438,7 +1438,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2017-x86-x64-install
@@ -1459,7 +1459,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
@@ -1527,7 +1527,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2017-x86-x64-install
@@ -1548,7 +1548,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
@@ -1616,7 +1616,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2019-x86-x64-install
@@ -1637,7 +1637,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
@@ -1705,7 +1705,7 @@ jobs:
         submodules: true
     - name: cache-protobuf
       id: cache-protobuf
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "protobuf-install"
         key: protobuf-vs2019-x86-x64-install
@@ -1726,7 +1726,7 @@ jobs:
         cmake --build . --config Release --target install
     - name: cache-vulkansdk
       id: cache-vulkansdk
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3.0.5
       with:
         path: "VulkanSDK"
         key: VulkanSDK-1.1.114.0-Installer
